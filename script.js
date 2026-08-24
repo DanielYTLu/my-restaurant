@@ -1360,7 +1360,16 @@ restaurantForm.addEventListener(
         // ==================================================
         // 取得表單資料
         // ==================================================
+        
+        console.log(
+    "📍 表單地址：",
+    document.getElementById("restaurantAddress").value
+);
 
+console.log(
+    "⭐ 表單評分：",
+    document.getElementById("restaurantRating").value
+);
         const restaurantData = {
 
             name:
