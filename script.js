@@ -1230,7 +1230,6 @@ addRestaurantButton.addEventListener(
     () => {
 
         delete restaurantForm.dataset.editingId;
-        delete restaurantForm.dataset.currentImage;
 
 
         restaurantForm.reset();
@@ -1298,7 +1297,6 @@ function closeRestaurantModal() {
 
 
     delete restaurantForm.dataset.editingId;
-    delete restaurantForm.dataset.currentImage;
 
 
     updateMenuPreview(
@@ -1372,54 +1370,18 @@ console.log(
     "⭐ 表單評分：",
     document.getElementById("restaurantRating").value
 );
-        // ==================================================
-// 取得餐廳圖片檔案
-// ==================================================
-
-const restaurantImageInput =
-    document.getElementById(
-        "restaurantImage"
-    );
-
-const restaurantImageFile =
-    restaurantImageInput &&
-    restaurantImageInput.files.length > 0
-        ? restaurantImageInput.files[0]
-        : null;
-
-
-console.log(
-    "📷 表單選擇的餐廳圖片：",
-    restaurantImageFile
-);
-
-        let restaurantImageUrl =
+        const existingRestaurant =
             editingId
-                ? restaurantForm.dataset.currentImage || ""
-                : "";
-
-        if (
-            restaurantImageFile
-        ) {
-
-            restaurantImageUrl =
-                await uploadRestaurantImage(
-                    restaurantImageFile
-                );
-
-            if (
-                !restaurantImageUrl
-            ) {
-
-                alert(
-                    "❌ 圖片上傳失敗，餐廳資料未儲存。"
-                );
-
-                return;
-
-            }
-
-        }
+                ? restaurants.find(
+                    restaurant =>
+                        String(
+                            restaurant.id
+                        ) ===
+                        String(
+                            editingId
+                        )
+                )
+                : null;
 
         const restaurantData = {
 
@@ -1462,7 +1424,7 @@ console.log(
                 ).value.trim(),
 
             image:
-                restaurantImageUrl,
+                existingRestaurant?.image || "",
 
             menuImages:
                 menuImages,
@@ -2135,72 +2097,6 @@ function openEditRestaurant(
         "restaurantRating"
     ).value =
         restaurant.rating ?? "";
-
-
-    // ==================================================
-    // 餐廳圖片
-    // ==================================================
-
-    const imageInput =
-        document.getElementById(
-            "restaurantImage"
-        );
-
-    const imagePreview =
-        document.getElementById(
-            "restaurantImagePreview"
-        );
-
-
-    // File input 不能直接填入圖片 URL
-    imageInput.value = "";
-
-
-    // 儲存目前餐廳原本的圖片 URL
-    restaurantForm.dataset.currentImage =
-        restaurant.image || "";
-
-
-    // 顯示原本的圖片
-    if (
-        restaurant.image
-    ) {
-
-        imagePreview.innerHTML = `
-
-            <img
-                src="${restaurant.image}"
-                alt="目前餐廳圖片"
-                style="
-                    width:100%;
-                    max-height:300px;
-                    object-fit:cover;
-                    border-radius:12px;
-                    display:block;
-                "
-            >
-
-            <p>
-                目前餐廳圖片
-            </p>
-
-        `;
-
-    }
-
-    else {
-
-        imagePreview.innerHTML = `
-
-            <span>📷</span>
-
-            <p>
-                尚未選擇圖片
-            </p>
-
-        `;
-
-    }
 
 
     // ==================================================
@@ -4419,256 +4315,6 @@ initializeMenuPreview();
 
 initializeMenuRemoveButtons();
 
-// ==================================================
-// Restaurant Image Upload Preview
-// ==================================================
-
-const restaurantImageInput =
-    document.getElementById(
-        "restaurantImage"
-    );
-
-const restaurantImagePreview =
-    document.getElementById(
-        "restaurantImagePreview"
-    );
-
-
-if (
-    restaurantImageInput &&
-    restaurantImagePreview
-) {
-
-    restaurantImageInput.addEventListener(
-        "change",
-        function () {
-
-            const file =
-                this.files &&
-                this.files.length > 0
-                    ? this.files[0]
-                    : null;
-
-
-            console.log(
-                "🖼️ 選擇圖片：",
-                file
-            );
-
-
-            // ==================================================
-            // 沒有選擇圖片
-            // ==================================================
-
-            if (
-                !file
-            ) {
-
-                return;
-
-            }
-
-
-            // ==================================================
-            // 確認圖片格式
-            // ==================================================
-
-            if (
-                !file.type.startsWith(
-                    "image/"
-                )
-            ) {
-
-                alert(
-                    "請選擇圖片檔案。"
-                );
-
-                this.value = "";
-
-                return;
-
-            }
-
-
-            // ==================================================
-            // 建立預覽
-            // ==================================================
-
-            const imageURL =
-                URL.createObjectURL(
-                    file
-                );
-
-
-            restaurantImagePreview.innerHTML = `
-
-                <img
-                    src="${imageURL}"
-                    alt="餐廳圖片預覽"
-                    style="
-                        width:100%;
-                        max-height:300px;
-                        object-fit:cover;
-                        border-radius:12px;
-                        display:block;
-                    "
-                >
-
-                <p>
-                    ${file.name}
-                </p>
-
-            `;
-
-
-            console.log(
-                "✅ 圖片預覽成功"
-            );
-
-        }
-    );
-
-}
-// ==================================================
-// Upload Restaurant Image to Supabase Storage
-// ==================================================
-
-async function uploadRestaurantImage(file) {
-
-    // 沒有選圖片
-    if (!file) {
-
-        console.log("📷 沒有新的餐廳圖片");
-
-        return null;
-
-    }
-
-
-    // 確認是不是圖片
-    if (!file.type.startsWith("image/")) {
-
-        alert("請選擇圖片檔案。");
-
-        return null;
-
-    }
-
-
-    try {
-
-        // ==================================================
-        // 建立唯一檔名
-        // ==================================================
-
-        const fileExtension =
-            file.name.split(".").pop();
-
-        const fileName =
-            `${Date.now()}-${Math.random()
-                .toString(36)
-                .substring(2, 10)}.${fileExtension}`;
-
-
-        console.log(
-            "📤 開始上傳餐廳圖片：",
-            fileName
-        );
-
-
-        // ==================================================
-        // 上傳到 Supabase Storage
-        // ==================================================
-
-        const {
-            data,
-            error
-        } =
-            await supabaseClient
-                .storage
-                .from("restaurant-images")
-                .upload(
-                    fileName,
-                    file,
-                    {
-                        cacheControl: "3600",
-                        upsert: false
-                    }
-                );
-
-
-        // ==================================================
-        // 上傳失敗
-        // ==================================================
-
-        if (error) {
-
-            console.error(
-                "❌ 餐廳圖片上傳失敗：",
-                error
-            );
-
-            alert(
-                "❌ 圖片上傳失敗：" +
-                error.message
-            );
-
-            return null;
-
-        }
-
-
-        console.log(
-            "✅ 圖片成功上傳：",
-            data
-        );
-
-
-        // ==================================================
-        // 取得公開網址
-        // ==================================================
-
-        const {
-            data: publicUrlData
-        } =
-            supabaseClient
-                .storage
-                .from("restaurant-images")
-                .getPublicUrl(
-                    fileName
-                );
-
-
-        const imageUrl =
-            publicUrlData.publicUrl;
-
-
-        console.log(
-            "🌐 圖片網址：",
-            imageUrl
-        );
-
-
-        return imageUrl;
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "❌ 圖片上傳發生錯誤：",
-            error
-        );
-
-        alert(
-            "❌ 圖片上傳失敗，請檢查網路連線。"
-        );
-
-        return null;
-
-    }
-
-}
 // ==================================================
 // Supabase Connection Test
 // ==================================================
