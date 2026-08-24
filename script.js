@@ -390,12 +390,15 @@ function mapRestaurantToSupabase(
 
 
 // ==================================================
-// Compatibility
+// LocalStorage
 // ==================================================
 
-function saveRestaurants() {
+function saveRestaurantsLocal() {
 
-    saveRestaurantsLocal();
+    localStorage.setItem(
+        "restaurants",
+        JSON.stringify(restaurants)
+    );
 
 }
 
