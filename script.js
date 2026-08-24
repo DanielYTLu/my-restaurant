@@ -1156,6 +1156,10 @@ restaurantForm.addEventListener(
             restaurantForm.dataset.editingId;
 
 
+        // ==================================================
+        // 取得菜單圖片
+        // ==================================================
+
         const menuImages = [
 
             document.getElementById(
@@ -1171,10 +1175,13 @@ restaurantForm.addEventListener(
             ).value.trim()
 
         ].filter(
-            url =>
-                url !== ""
+            url => url !== ""
         );
 
+
+        // ==================================================
+        // 取得表單資料
+        // ==================================================
 
         const restaurantData = {
 
@@ -1235,90 +1242,126 @@ restaurantForm.addEventListener(
         // EDIT
         // ==================================================
 
-        if (
-            editingId
-        ) {
+        if (editingId) {
 
-            const index =
-                restaurants.findIndex(
-                    restaurant =>
-                        String(
-                            restaurant.id
-                        ) ===
-                        String(
-                            editingId
-                        )
-                );
+            console.log(
+                "✏️ 開始更新餐廳：",
+                editingId
+            );
 
 
-            if (
-                index === -1
-            ) {
+            // --------------------------------------------------
+            // 更新 Supabase
+            // --------------------------------------------------
 
-                alert(
-                    "找不到要編輯的餐廳。"
-                );
+            if (supabaseConnected) {
 
-                return;
-
-            }
-
-
-            const updatedRestaurant = {
-
-                ...restaurants[index],
-
-                ...restaurantData
-
-            };
-
-
-            // 先更新畫面
-
-            restaurants[index] =
-                updatedRestaurant;
-
-
-            saveRestaurantsLocal();
-
-            renderRestaurants();
-
-            closeRestaurantModal();
-
-
-            // 雲端更新
-
-            if (
-                supabaseConnected
-            ) {
-
-                const result =
+                const updatedRestaurant =
                     await updateRestaurantInSupabase(
                         editingId,
-                        updatedRestaurant
+                        restaurantData
                     );
 
 
-                if (
-                    !result
-                ) {
+                // --------------------------------------------------
+                // Supabase 更新失敗
+                // --------------------------------------------------
+
+                if (!updatedRestaurant) {
 
                     alert(
-                        "餐廳已更新，但雲端同步失敗，請檢查網路連線。"
+                        "❌ 餐廳更新失敗，請檢查網路連線。"
                     );
+
+                    return;
 
                 }
 
-                else {
 
-                    console.log(
-                        "☁️ 編輯資料已同步到 Supabase"
-                    );
+                console.log(
+                    "☁️ 餐廳已成功更新到 Supabase：",
+                    updatedRestaurant
+                );
 
-                }
+
+                // --------------------------------------------------
+                // 重新從 Supabase 讀取
+                // --------------------------------------------------
+
+                await loadRestaurants();
+
+
+                // --------------------------------------------------
+                // 更新畫面
+                // --------------------------------------------------
+
+                renderRestaurants();
+
+
+                // --------------------------------------------------
+                // 關閉編輯視窗
+                // --------------------------------------------------
+
+                closeRestaurantModal();
+
+
+                alert(
+                    "✅ 餐廳資料已更新！"
+                );
 
             }
 
+
+            // --------------------------------------------------
+            // Supabase 沒連線
+            // --------------------------------------------------
+
+            else {
+
+                const index =
+                    restaurants.findIndex(
+                        restaurant =>
+                            String(
+                                restaurant.id
+                            ) ===
+                            String(
+                                editingId
+                            )
+                    );
+
+
+                if (index === -1) {
+
+                    alert(
+                        "找不到要編輯的餐廳。"
+                    );
+
+                    return;
+
+                }
+
+
+                restaurants[index] = {
+
+                    ...restaurants[index],
+
+                    ...restaurantData
+
+                };
+
+
+                saveRestaurantsLocal();
+
+                renderRestaurants();
+
+                closeRestaurantModal();
+
+
+                alert(
+                    "⚠️ Supabase 尚未連線，目前只儲存在本機。"
+                );
+
+            }
 
         }
 
@@ -1344,11 +1387,17 @@ restaurantForm.addEventListener(
             };
 
 
-            // Supabase
+            console.log(
+                "➕ 開始新增餐廳：",
+                newRestaurant
+            );
 
-            if (
-                supabaseConnected
-            ) {
+
+            // --------------------------------------------------
+            // Supabase
+            // --------------------------------------------------
+
+            if (supabaseConnected) {
 
                 const saved =
                     await createRestaurantInSupabase(
@@ -1356,20 +1405,32 @@ restaurantForm.addEventListener(
                     );
 
 
-                if (
-                    saved
-                ) {
+                if (saved) {
 
-                    restaurants.unshift(
+                    console.log(
+                        "☁️ 新餐廳已成功同步到 Supabase：",
                         saved
                     );
 
 
-                    console.log(
-                        "☁️ 新餐廳已同步到 Supabase"
+                    // 重新從 Supabase 讀取
+                    await loadRestaurants();
+
+
+                    // 更新畫面
+                    renderRestaurants();
+
+
+                    // 關閉視窗
+                    closeRestaurantModal();
+
+
+                    alert(
+                        "✅ 餐廳已成功新增！"
                     );
 
                 }
+
 
                 else {
 
@@ -1378,8 +1439,15 @@ restaurantForm.addEventListener(
                     );
 
 
+                    saveRestaurantsLocal();
+
+                    renderRestaurants();
+
+                    closeRestaurantModal();
+
+
                     alert(
-                        "餐廳已暫存，但無法同步到 Supabase。"
+                        "⚠️ 餐廳已暫存，但無法同步到 Supabase。"
                     );
 
                 }
@@ -1387,7 +1455,9 @@ restaurantForm.addEventListener(
             }
 
 
+            // --------------------------------------------------
             // Local fallback
+            // --------------------------------------------------
 
             else {
 
@@ -1395,17 +1465,26 @@ restaurantForm.addEventListener(
                     newRestaurant
                 );
 
+
+                saveRestaurantsLocal();
+
+                renderRestaurants();
+
+                closeRestaurantModal();
+
+
+                alert(
+                    "⚠️ Supabase 尚未連線，目前只儲存在本機。"
+                );
+
             }
-
-
-            saveRestaurantsLocal();
-
-            renderRestaurants();
-
-            closeRestaurantModal();
 
         }
 
+
+        // ==================================================
+        // 回到列表頂端
+        // ==================================================
 
         window.scrollTo({
 
