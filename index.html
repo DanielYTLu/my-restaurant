@@ -423,28 +423,23 @@
 
 
                     <p class="form-description">
+    上傳餐廳封面圖片，圖片會儲存到雲端。
+</p>
 
-                        請貼上餐廳封面圖片網址。
+<div class="image-upload-group">
 
-                    </p>
-
-
-                    <label class="form-field">
-
-                        <span>
-                            圖片網址
-                        </span>
-
-                        <div class="image-upload-group">
-
-    <label for="restaurantImage">
-        餐廳圖片
+    <label
+        for="restaurantImage"
+        class="image-upload-button"
+    >
+        📷 選擇餐廳圖片
     </label>
 
     <input
         type="file"
         id="restaurantImage"
         accept="image/*"
+        hidden
     >
 
     <div
@@ -456,8 +451,6 @@
     </div>
 
 </div>
-
-                    </label>
 
                 </div>
 
