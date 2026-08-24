@@ -4263,6 +4263,98 @@ initializeMenuPreview();
 
 initializeMenuRemoveButtons();
 
+// ==================================================
+// Restaurant Image Upload Preview
+// ==================================================
+
+const restaurantImageInput =
+    document.getElementById(
+        "restaurantImage"
+    );
+
+const restaurantImagePreview =
+    document.getElementById(
+        "restaurantImagePreview"
+    );
+
+
+if (
+    restaurantImageInput &&
+    restaurantImagePreview
+) {
+
+    restaurantImageInput.addEventListener(
+        "change",
+        () => {
+
+            const file =
+                restaurantImageInput.files[0];
+
+
+            // 沒有選擇圖片
+
+            if (!file) {
+
+                restaurantImagePreview.innerHTML = `
+
+                    <span>📷</span>
+
+                    <p>
+                        尚未選擇圖片
+                    </p>
+
+                `;
+
+                return;
+
+            }
+
+
+            // 確認是否為圖片
+
+            if (
+                !file.type.startsWith(
+                    "image/"
+                )
+            ) {
+
+                alert(
+                    "請選擇圖片檔案。"
+                );
+
+                restaurantImageInput.value =
+                    "";
+
+                return;
+
+            }
+
+
+            // 顯示預覽
+
+            const imageURL =
+                URL.createObjectURL(
+                    file
+                );
+
+
+            restaurantImagePreview.innerHTML = `
+
+                <img
+                    src="${imageURL}"
+                    alt="餐廳圖片預覽"
+                >
+
+                <p>
+                    ${file.name}
+                </p>
+
+            `;
+
+        }
+    );
+
+}
 
 // ==================================================
 // Supabase Connection Test

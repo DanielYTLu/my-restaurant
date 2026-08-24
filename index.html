@@ -435,11 +435,27 @@
                             圖片網址
                         </span>
 
-                        <input
-                            type="url"
-                            id="restaurantImage"
-                            placeholder="https://..."
-                        >
+                        <div class="image-upload-group">
+
+    <label for="restaurantImage">
+        餐廳圖片
+    </label>
+
+    <input
+        type="file"
+        id="restaurantImage"
+        accept="image/*"
+    >
+
+    <div
+        id="restaurantImagePreview"
+        class="image-upload-preview"
+    >
+        <span>📷</span>
+        <p>尚未選擇圖片</p>
+    </div>
+
+</div>
 
                     </label>
 
