@@ -1,4 +1,20 @@
 // ==================================================
+// Supabase Configuration
+// ==================================================
+
+const SUPABASE_URL =
+    "https://rcyxqxzerhpdneagmjwjf.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+    "sb_publishable_UykY-RJm0HyKtmJkkE9CWg_CDFpwlHJ";
+
+
+const supabaseClient =
+    window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_PUBLISHABLE_KEY
+    );
+// ==================================================
 // Restaurant Management System
 // ==================================================
 
@@ -3343,3 +3359,37 @@ function openFullscreenMenuImage(
 initializeMenuPreview();
 
 initializeMenuRemoveButtons();
+
+// ==================================================
+// Supabase Test
+// ==================================================
+
+async function testSupabaseConnection() {
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("restaurants")
+        .select("*");
+
+    if (error) {
+
+        console.error(
+            "Supabase 連線失敗：",
+            error
+        );
+
+        return;
+
+    }
+
+
+    console.log(
+        "Supabase 連線成功！",
+        data
+    );
+
+}
+
+testSupabaseConnection();
