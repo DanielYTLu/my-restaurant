@@ -2249,44 +2249,39 @@ function openEditRestaurant(
     // 菜單圖片
     // ==================================================
 
-    const menuImages =
-        restaurant.menuImages || [];
+   const menuImages =
+    restaurant.menuImages || [];
 
 
-    document.getElementById(
-        "restaurantMenu1"
-    ).value =
-        menuImages[0] || "";
+// File input 不能直接填入舊圖片
+document.getElementById(
+    "restaurantMenu1"
+).value = "";
+
+document.getElementById(
+    "restaurantMenu2"
+).value = "";
+
+document.getElementById(
+    "restaurantMenu3"
+).value = "";
 
 
-    document.getElementById(
-        "restaurantMenu2"
-    ).value =
-        menuImages[1] || "";
+// 顯示目前已儲存的菜單圖片
+updateMenuPreview(
+    1,
+    menuImages[0] || ""
+);
 
+updateMenuPreview(
+    2,
+    menuImages[1] || ""
+);
 
-    document.getElementById(
-        "restaurantMenu3"
-    ).value =
-        menuImages[2] || "";
-
-
-    updateMenuPreview(
-        1,
-        menuImages[0] || ""
-    );
-
-
-    updateMenuPreview(
-        2,
-        menuImages[1] || ""
-    );
-
-
-    updateMenuPreview(
-        3,
-        menuImages[2] || ""
-    );
+updateMenuPreview(
+    3,
+    menuImages[2] || ""
+);
 
 }
 
@@ -2440,65 +2435,96 @@ async function deleteRestaurant(
 
 
 // ==================================================
-// Menu Image Preview
+// Initialize Menu Image Preview
 // ==================================================
 
 function initializeMenuPreview() {
 
     const menuInputs = [
 
-        document.getElementById(
-            "restaurantMenu1"
-        ),
-
-        document.getElementById(
-            "restaurantMenu2"
-        ),
-
-        document.getElementById(
-            "restaurantMenu3"
-        )
+        document.getElementById("restaurantMenu1"),
+        document.getElementById("restaurantMenu2"),
+        document.getElementById("restaurantMenu3")
 
     ];
 
 
-    menuInputs.forEach(
-        (input, index) => {
+    menuInputs.forEach((input, index) => {
 
-            if (
-                !input
-            ) {
+        if (!input) {
+            return;
+        }
+
+
+        input.addEventListener("change", () => {
+
+            const file =
+                input.files &&
+                input.files.length > 0
+                    ? input.files[0]
+                    : null;
+
+
+            if (!file) {
+
+                updateMenuPreview(
+                    index + 1,
+                    null
+                );
 
                 return;
 
             }
 
 
-            input.addEventListener(
-                "input",
-                () => {
+            // ==================================================
+            // 確認是否為圖片
+            // ==================================================
 
-                    updateMenuPreview(
-                        index + 1,
-                        input.value.trim()
-                    );
+            if (!file.type.startsWith("image/")) {
 
-                }
+                alert("請選擇圖片檔案。");
+
+                input.value = "";
+
+                updateMenuPreview(
+                    index + 1,
+                    null
+                );
+
+                return;
+
+            }
+
+
+            console.log(
+                `📖 菜單 ${index + 1} 選擇圖片：`,
+                file
             );
 
-        }
-    );
+
+            // ==================================================
+            // 顯示圖片預覽
+            // ==================================================
+
+            updateMenuPreview(
+                index + 1,
+                file
+            );
+
+        });
+
+    });
 
 }
 
-
 // ==================================================
-// Update Menu Preview
+// Update Menu Image Preview
 // ==================================================
 
 function updateMenuPreview(
     menuNumber,
-    imageUrl
+    fileOrUrl
 ) {
 
     const preview =
@@ -2507,18 +2533,16 @@ function updateMenuPreview(
         );
 
 
-    if (
-        !preview
-    ) {
-
+    if (!preview) {
         return;
-
     }
 
 
-    if (
-        !imageUrl
-    ) {
+    // ==================================================
+    // 沒有圖片
+    // ==================================================
+
+    if (!fileOrUrl) {
 
         preview.innerHTML = `
 
@@ -2541,83 +2565,85 @@ function updateMenuPreview(
     }
 
 
+    // ==================================================
+    // 如果是 File
+    // ==================================================
+
+    if (fileOrUrl instanceof File) {
+
+        const imageURL =
+            URL.createObjectURL(
+                fileOrUrl
+            );
+
+
+        preview.innerHTML = `
+
+            <img
+                src="${imageURL}"
+                alt="菜單 ${menuNumber}"
+                class="menu-preview-image"
+            >
+
+            <p>
+                ${fileOrUrl.name}
+            </p>
+
+        `;
+
+
+        return;
+
+    }
+
+
+    // ==================================================
+    // 如果是舊資料的圖片 URL
+    // ==================================================
+
+    if (
+        typeof fileOrUrl === "string" &&
+        fileOrUrl.trim() !== ""
+    ) {
+
+        preview.innerHTML = `
+
+            <img
+                src="${fileOrUrl}"
+                alt="菜單 ${menuNumber}"
+                class="menu-preview-image"
+            >
+
+            <p>
+                目前菜單圖片
+            </p>
+
+        `;
+
+        return;
+
+    }
+
+
+    // ==================================================
+    // 其他情況
+    // ==================================================
+
     preview.innerHTML = `
 
         <div class="menu-preview-empty">
 
             <span>
-                ⏳
+                📖
             </span>
 
             <p>
-                圖片載入中...
+                尚未加入菜單圖片
             </p>
 
         </div>
 
     `;
-
-
-    const image =
-        new Image();
-
-
-    image.onload =
-        () => {
-
-            preview.innerHTML =
-                "";
-
-
-            image.alt =
-                `菜單 ${menuNumber}`;
-
-
-            image.className =
-                "menu-preview-image";
-
-
-            preview.appendChild(
-                image
-            );
-
-        };
-
-
-    image.onerror =
-        () => {
-
-            preview.innerHTML = `
-
-                <div class="menu-preview-error">
-
-                    <div
-                        class="menu-preview-error-icon"
-                    >
-                        ⚠️
-                    </div>
-
-                    <div
-                        class="menu-preview-error-title"
-                    >
-                        圖片無法載入
-                    </div>
-
-                    <div
-                        class="menu-preview-error-text"
-                    >
-                        請確認圖片網址是否正確
-                    </div>
-
-                </div>
-
-            `;
-
-        };
-
-
-    image.src =
-        imageUrl;
 
 }
 
