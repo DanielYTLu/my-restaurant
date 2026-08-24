@@ -4209,9 +4209,16 @@ testSupabaseConnection();
 // Load Restaurants From Supabase
 // ==================================================
 
+// ==================================================
+// Load Restaurants From Supabase
+// ==================================================
+
 async function loadRestaurants() {
 
-    console.log("正在從 Supabase 讀取餐廳資料...");
+    console.log(
+        "正在從 Supabase 讀取餐廳資料..."
+    );
+
 
     const {
         data,
@@ -4219,9 +4226,17 @@ async function loadRestaurants() {
     } = await supabaseClient
         .from("restaurants")
         .select("*")
-        .order("created_at", {
-            ascending: false
-        });
+        .order(
+            "created_at",
+            {
+                ascending: false
+            }
+        );
+
+
+    // ==================================================
+    // Supabase Error
+    // ==================================================
 
     if (error) {
 
@@ -4238,62 +4253,146 @@ async function loadRestaurants() {
 
     }
 
+
     console.log(
-        "✅ Supabase 餐廳資料：",
+        "✅ Supabase 原始資料：",
         data
     );
 
+
+    // ==================================================
+    // Convert Supabase Data
+    // ==================================================
+
     restaurants =
         (data || []).map(
-            restaurant => ({
+            restaurant => {
 
-                id:
-                    restaurant.id,
+                return {
 
-                name:
-                    restaurant.name || "",
+                    // ----------------------------------
+                    // 基本資料
+                    // ----------------------------------
 
-                category:
-                    restaurant.category || "",
+                    id:
+                        restaurant.id,
 
-                rating:
-                    restaurant.rating || null,
+                    name:
+                        restaurant.name || "",
 
-                image:
-                    restaurant.restaurant_image_url || "",
 
-                phone:
-                    restaurant.phone || "",
+                    category:
+                        restaurant.category || "",
 
-                address:
-                    restaurant.address || "",
 
-                hours:
-                    restaurant.opening_hours || "",
+                    // ----------------------------------
+                    // 評分
+                    // ----------------------------------
 
-                maps:
-                    restaurant.google_maps_url || "",
+                    rating:
+                        restaurant.rating !== null &&
+                        restaurant.rating !== undefined &&
+                        restaurant.rating !== ""
+                            ? Number(
+                                restaurant.rating
+                            )
+                            : null,
 
-                menuImages:
-                    Array.isArray(
-                        restaurant.menu_images
-                    )
-                        ? restaurant.menu_images
-                        : [],
 
-                description:
-                    restaurant.description || "",
+                    // ----------------------------------
+                    // 餐廳圖片
+                    // ----------------------------------
 
-                favorite:
-                    restaurant.favorite || false
+                    image:
+                        restaurant.restaurant_image_url ||
+                        "",
 
-            })
+
+                    // ----------------------------------
+                    // 聯絡資訊
+                    // ----------------------------------
+
+                    phone:
+                        restaurant.phone || "",
+
+
+                    // ----------------------------------
+                    // 地址
+                    //
+                    // 注意：
+                    // 目前你的 Supabase 沒有 address 欄位
+                    //
+                    // 所以暫時從 notes / description
+                    // 無法正確判斷地址。
+                    // ----------------------------------
+
+                    address:
+                        restaurant.address ||
+                        "",
+
+
+                    // ----------------------------------
+                    // 營業時間
+                    // ----------------------------------
+
+                    hours:
+                        restaurant.opening_hours ||
+                        "",
+
+
+                    // ----------------------------------
+                    // Google Maps
+                    // ----------------------------------
+
+                    maps:
+                        restaurant.google_maps_url ||
+                        "",
+
+
+                    // ----------------------------------
+                    // 菜單圖片
+                    // ----------------------------------
+
+                    menuImages:
+                        Array.isArray(
+                            restaurant.menu_images
+                        )
+                            ? restaurant.menu_images
+                            : [],
+
+
+                    // ----------------------------------
+                    // 備註
+                    // ----------------------------------
+
+                    description:
+                    restaurant.notes ||
+                    restaurant.description ||
+                    "",
+
+
+                    // ----------------------------------
+                    // 收藏
+                    // ----------------------------------
+
+                    favorite:
+                        restaurant.favorite === true
+
+                };
+
+            }
         );
+
 
     console.log(
         "✅ 網站餐廳資料已更新：",
         restaurants
     );
+
+
+    // ==================================================
+    // Render
+    // ==================================================
 
     renderRestaurants();
 
