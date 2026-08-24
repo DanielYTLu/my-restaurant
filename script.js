@@ -3,30 +3,38 @@
 // ==================================================
 
 const SUPABASE_URL =
-    "https://rcyxqxzerhpdneagmjwjf.supabase.co";
+    "https://rcyqxzerhpdneagmjwjf.supabase.co";
 
 const SUPABASE_PUBLISHABLE_KEY =
-    "sb_publishable_UykY-RJm0HyKtmJkkE9CWg_CDFpwlHJ";
-
+    "sb_publishable_UykY-RjM0HyKtmJkkE9CWg_CDFpwlHJ";
 
 const supabaseClient =
     window.supabase.createClient(
         SUPABASE_URL,
         SUPABASE_PUBLISHABLE_KEY
     );
+
+
 // ==================================================
 // Restaurant Management System
 // ==================================================
 
 
 // ==================================================
-// Restaurant Data
+// Local Cache
 // ==================================================
 
 let restaurants =
     JSON.parse(
         localStorage.getItem("restaurants")
     ) || [];
+
+
+// ==================================================
+// Supabase Status
+// ==================================================
+
+let supabaseConnected = false;
 
 
 // ==================================================
@@ -76,91 +84,102 @@ const restaurantForm =
 initialize();
 
 
-function initialize() {
+async function initialize() {
+
+    console.log(
+        "🍽️ Restaurant Management System 初始化中..."
+    );
+
+
+    // --------------------------------------------------
+    // 優先從 Supabase 讀取
+    // --------------------------------------------------
+
+    const success =
+        await loadRestaurantsFromSupabase();
+
+
+    // --------------------------------------------------
+    // Supabase 沒資料
+    // --------------------------------------------------
 
     if (
+        success &&
         restaurants.length === 0
     ) {
 
-        restaurants = [
-
-            {
-
-                id: Date.now(),
-
-                name: "山海鍋物",
-
-                category: "火鍋",
-
-                rating: 4.6,
-
-                image:
-                    "https://images.unsplash.com/photo-1547592180-85f173990554",
-
-                phone:
-                    "02-1234-5678",
-
-                address:
-                    "台北市大安區",
-
-                hours:
-                    "11:30 - 21:30",
-
-                maps:
-                    "https://www.google.com/maps",
-
-                menuImages: [
-
-                    "https://images.unsplash.com/photo-1547592180-85f173990554"
-
-                ],
-
-                description:
-                    "適合朋友聚餐的火鍋店。",
-
-                favorite: false
-
-            },
+        console.log(
+            "Supabase 目前沒有餐廳資料"
+        );
 
 
-            {
+        // 如果 LocalStorage 有舊資料
+        // 嘗試搬到 Supabase
 
-                id: Date.now() + 1,
+        if (
+            restaurants.length === 0
+        ) {
 
-                name: "Morning Coffee",
+            const localRestaurants =
+                JSON.parse(
+                    localStorage.getItem(
+                        "restaurants"
+                    )
+                ) || [];
 
-                category: "咖啡",
 
-                rating: 4.8,
+            if (
+                localRestaurants.length > 0
+            ) {
 
-                image:
-                    "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085",
+                console.log(
+                    "發現舊的 LocalStorage 資料，準備同步到 Supabase..."
+                );
 
-                phone:
-                    "02-2345-6789",
 
-                address:
-                    "台北市大安區",
+                for (
+                    const restaurant
+                    of localRestaurants
+                ) {
 
-                hours:
-                    "08:00 - 18:00",
+                    await createRestaurantInSupabase(
+                        restaurant
+                    );
 
-                maps:
-                    "https://www.google.com/maps",
+                }
 
-                menuImages: [],
 
-                description:
-                    "適合讀書與工作的咖啡廳。",
-
-                favorite: false
+                await loadRestaurantsFromSupabase();
 
             }
 
-        ];
+        }
+
+    }
 
 
-        saveRestaurants();
+    // --------------------------------------------------
+    // Supabase 連線失敗
+    // --------------------------------------------------
+
+    if (
+        !success
+    ) {
+
+        console.warn(
+            "⚠️ Supabase 無法連線，使用 LocalStorage"
+        );
+
+
+        if (
+            restaurants.length === 0
+        ) {
+
+            restaurants = createDefaultRestaurants();
+
+            saveRestaurantsLocal();
+
+        }
 
     }
 
@@ -171,15 +190,530 @@ function initialize() {
 
 
 // ==================================================
+// Default Restaurants
+// ==================================================
+
+function createDefaultRestaurants() {
+
+    return [
+
+        {
+
+            id:
+                String(
+                    Date.now()
+                ),
+
+            name:
+                "山海鍋物",
+
+            category:
+                "火鍋",
+
+            rating:
+                4.6,
+
+            image:
+                "https://images.unsplash.com/photo-1547592180-85f173990554",
+
+            phone:
+                "02-1234-5678",
+
+            address:
+                "台北市大安區",
+
+            hours:
+                "11:30 - 21:30",
+
+            maps:
+                "https://www.google.com/maps",
+
+            menuImages: [
+
+                "https://images.unsplash.com/photo-1547592180-85f173990554"
+
+            ],
+
+            description:
+                "適合朋友聚餐的火鍋店。",
+
+            favorite:
+                false
+
+        },
+
+
+        {
+
+            id:
+                String(
+                    Date.now() + 1
+                ),
+
+            name:
+                "Morning Coffee",
+
+            category:
+                "咖啡",
+
+            rating:
+                4.8,
+
+            image:
+                "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085",
+
+            phone:
+                "02-2345-6789",
+
+            address:
+                "台北市大安區",
+
+            hours:
+                "08:00 - 18:00",
+
+            maps:
+                "https://www.google.com/maps",
+
+            menuImages:
+                [],
+
+            description:
+                "適合讀書與工作的咖啡廳。",
+
+            favorite:
+                false
+
+        }
+
+    ];
+
+}
+
+
+// ==================================================
+// Load Restaurants From Supabase
+// ==================================================
+
+async function loadRestaurantsFromSupabase() {
+
+    try {
+
+        console.log(
+            "☁️ 正在從 Supabase 讀取餐廳..."
+        );
+
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .from("restaurants")
+                .select("*")
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                );
+
+
+        if (
+            error
+        ) {
+
+            console.error(
+                "❌ Supabase 讀取失敗：",
+                error
+            );
+
+            supabaseConnected =
+                false;
+
+            return false;
+
+        }
+
+
+        restaurants =
+            data.map(
+                mapSupabaseToRestaurant
+            );
+
+
+        supabaseConnected =
+            true;
+
+
+        saveRestaurantsLocal();
+
+
+        console.log(
+            `✅ Supabase 讀取成功，共 ${restaurants.length} 間餐廳`
+        );
+
+
+        return true;
+
+    }
+
+    catch (
+        error
+    ) {
+
+        console.error(
+            "❌ Supabase 連線失敗：",
+            error
+        );
+
+
+        supabaseConnected =
+            false;
+
+
+        return false;
+
+    }
+
+}
+
+
+// ==================================================
+// Supabase → Frontend
+// ==================================================
+
+function mapSupabaseToRestaurant(
+    row
+) {
+
+    return {
+
+        id:
+            String(
+                row.id
+            ),
+
+        name:
+            row.name || "",
+
+        category:
+            row.category || "",
+
+        rating:
+            row.rating ?? null,
+
+        image:
+            row.restaurant_image_url || "",
+
+        phone:
+            row.phone || "",
+
+        address:
+            row.description || "",
+
+        hours:
+            row.opening_hours || "",
+
+        maps:
+            row.google_maps_url || "",
+
+        menuImages:
+            Array.isArray(
+                row.menu_images
+            )
+                ? row.menu_images
+                : [],
+
+        description:
+            row.notes || "",
+
+        favorite:
+            Boolean(
+                row.favorite
+            )
+
+    };
+
+}
+
+
+// ==================================================
+// Frontend → Supabase
+// ==================================================
+
+function mapRestaurantToSupabase(
+    restaurant
+) {
+
+    return {
+
+        name:
+            restaurant.name,
+
+        category:
+            restaurant.category || null,
+
+        description:
+            restaurant.address || null,
+
+        phone:
+            restaurant.phone || null,
+
+        opening_hours:
+            restaurant.hours || null,
+
+        google_maps_url:
+            restaurant.maps || null,
+
+        restaurant_image_url:
+            restaurant.image || null,
+
+        favorite:
+            Boolean(
+                restaurant.favorite
+            ),
+
+        notes:
+            restaurant.description || null,
+
+        menu_images:
+            restaurant.menuImages || []
+
+    };
+
+}
+
+
+// ==================================================
 // LocalStorage
+// ==================================================
+
+function saveRestaurantsLocal() {
+
+    localStorage.setItem(
+        "restaurants",
+        JSON.stringify(
+            restaurants
+        )
+    );
+
+}
+
+
+// ==================================================
+// Compatibility
 // ==================================================
 
 function saveRestaurants() {
 
-    localStorage.setItem(
-        "restaurants",
-        JSON.stringify(restaurants)
-    );
+    saveRestaurantsLocal();
+
+}
+
+
+// ==================================================
+// Create Restaurant
+// ==================================================
+
+async function createRestaurantInSupabase(
+    restaurant
+) {
+
+    try {
+
+        const payload =
+            mapRestaurantToSupabase(
+                restaurant
+            );
+
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .from("restaurants")
+                .insert(
+                    payload
+                )
+                .select()
+                .single();
+
+
+        if (
+            error
+        ) {
+
+            console.error(
+                "❌ 新增餐廳失敗：",
+                error
+            );
+
+            return null;
+
+        }
+
+
+        console.log(
+            "✅ 餐廳新增至 Supabase：",
+            data
+        );
+
+
+        return mapSupabaseToRestaurant(
+            data
+        );
+
+    }
+
+    catch (
+        error
+    ) {
+
+        console.error(
+            "❌ 新增餐廳錯誤：",
+            error
+        );
+
+        return null;
+
+    }
+
+}
+
+
+// ==================================================
+// Update Restaurant
+// ==================================================
+
+async function updateRestaurantInSupabase(
+    id,
+    restaurant
+) {
+
+    try {
+
+        const payload =
+            mapRestaurantToSupabase(
+                restaurant
+            );
+
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .from("restaurants")
+                .update(
+                    payload
+                )
+                .eq(
+                    "id",
+                    id
+                )
+                .select()
+                .single();
+
+
+        if (
+            error
+        ) {
+
+            console.error(
+                "❌ 更新餐廳失敗：",
+                error
+            );
+
+            return null;
+
+        }
+
+
+        console.log(
+            "✅ 餐廳已更新至 Supabase"
+        );
+
+
+        return mapSupabaseToRestaurant(
+            data
+        );
+
+    }
+
+    catch (
+        error
+    ) {
+
+        console.error(
+            "❌ 更新餐廳錯誤：",
+            error
+        );
+
+        return null;
+
+    }
+
+}
+
+
+// ==================================================
+// Delete Restaurant From Supabase
+// ==================================================
+
+async function deleteRestaurantFromSupabase(
+    id
+) {
+
+    try {
+
+        const {
+            error
+        } =
+            await supabaseClient
+                .from("restaurants")
+                .delete()
+                .eq(
+                    "id",
+                    id
+                );
+
+
+        if (
+            error
+        ) {
+
+            console.error(
+                "❌ Supabase 刪除失敗：",
+                error
+            );
+
+            return false;
+
+        }
+
+
+        console.log(
+            "✅ Supabase 餐廳已刪除"
+        );
+
+
+        return true;
+
+    }
+
+    catch (
+        error
+    ) {
+
+        console.error(
+            "❌ 刪除餐廳錯誤：",
+            error
+        );
+
+        return false;
+
+    }
 
 }
 
@@ -251,6 +785,7 @@ function createRestaurantCard(
         document.createElement(
             "article"
         );
+
 
     article.className =
         "restaurant-card";
@@ -422,39 +957,82 @@ function createRestaurantCard(
 // Favorite
 // ==================================================
 
-function toggleFavorite(
+async function toggleFavorite(
     id
 ) {
 
-    restaurants =
-        restaurants.map(
-            restaurant => {
-
-                if (
-                    restaurant.id === id
-                ) {
-
-                    return {
-
-                        ...restaurant,
-
-                        favorite:
-                            !restaurant.favorite
-
-                    };
-
-                }
-
-
-                return restaurant;
-
-            }
+    const index =
+        restaurants.findIndex(
+            restaurant =>
+                String(
+                    restaurant.id
+                ) ===
+                String(id)
         );
 
 
-    saveRestaurants();
+    if (
+        index === -1
+    ) {
+
+        return;
+
+    }
+
+
+    restaurants[index].favorite =
+        !restaurants[index].favorite;
+
+
+    saveRestaurantsLocal();
 
     renderRestaurants();
+
+
+    // Supabase
+
+    if (
+        supabaseConnected
+    ) {
+
+        const {
+            error
+        } =
+            await supabaseClient
+                .from("restaurants")
+                .update({
+
+                    favorite:
+                        restaurants[index]
+                            .favorite
+
+                })
+                .eq(
+                    "id",
+                    id
+                );
+
+
+        if (
+            error
+        ) {
+
+            console.error(
+                "❌ 收藏同步失敗：",
+                error
+            );
+
+        }
+
+        else {
+
+            console.log(
+                "☁️ 收藏狀態已同步"
+            );
+
+        }
+
+    }
 
 }
 
@@ -647,19 +1225,24 @@ function closeRestaurantModal() {
         "show"
     );
 
+
     restaurantForm.reset();
 
+
     delete restaurantForm.dataset.editingId;
+
 
     updateMenuPreview(
         1,
         ""
     );
 
+
     updateMenuPreview(
         2,
         ""
     );
+
 
     updateMenuPreview(
         3,
@@ -675,7 +1258,7 @@ function closeRestaurantModal() {
 
 restaurantForm.addEventListener(
     "submit",
-    event => {
+    async event => {
 
         event.preventDefault();
 
@@ -699,7 +1282,8 @@ restaurantForm.addEventListener(
             ).value.trim()
 
         ].filter(
-            url => url !== ""
+            url =>
+                url !== ""
         );
 
 
@@ -748,7 +1332,6 @@ restaurantForm.addEventListener(
                 ).value.trim(),
 
             menuImages:
-
                 menuImages,
 
             description:
@@ -759,64 +1342,180 @@ restaurantForm.addEventListener(
         };
 
 
-        // Edit
+        // ==================================================
+        // EDIT
+        // ==================================================
 
         if (
             editingId
         ) {
 
-            restaurants =
-                restaurants.map(
-                    restaurant => {
-
-                        if (
-                            restaurant.id ==
+            const index =
+                restaurants.findIndex(
+                    restaurant =>
+                        String(
+                            restaurant.id
+                        ) ===
+                        String(
                             editingId
-                        ) {
-
-                            return {
-
-                                ...restaurant,
-
-                                ...restaurantData
-
-                            };
-
-                        }
-
-
-                        return restaurant;
-
-                    }
+                        )
                 );
+
+
+            if (
+                index === -1
+            ) {
+
+                alert(
+                    "找不到要編輯的餐廳。"
+                );
+
+                return;
+
+            }
+
+
+            const updatedRestaurant = {
+
+                ...restaurants[index],
+
+                ...restaurantData
+
+            };
+
+
+            // 先更新畫面
+
+            restaurants[index] =
+                updatedRestaurant;
+
+
+            saveRestaurantsLocal();
+
+            renderRestaurants();
+
+            closeRestaurantModal();
+
+
+            // 雲端更新
+
+            if (
+                supabaseConnected
+            ) {
+
+                const result =
+                    await updateRestaurantInSupabase(
+                        editingId,
+                        updatedRestaurant
+                    );
+
+
+                if (
+                    !result
+                ) {
+
+                    alert(
+                        "餐廳已更新，但雲端同步失敗，請檢查網路連線。"
+                    );
+
+                }
+
+                else {
+
+                    console.log(
+                        "☁️ 編輯資料已同步到 Supabase"
+                    );
+
+                }
+
+            }
+
 
         }
 
 
-        // Add
+        // ==================================================
+        // ADD
+        // ==================================================
 
         else {
 
-            restaurants.unshift({
+            const newRestaurant = {
 
                 id:
-                    Date.now(),
+                    String(
+                        Date.now()
+                    ),
 
                 ...restaurantData,
 
                 favorite:
                     false
 
-            });
+            };
+
+
+            // Supabase
+
+            if (
+                supabaseConnected
+            ) {
+
+                const saved =
+                    await createRestaurantInSupabase(
+                        newRestaurant
+                    );
+
+
+                if (
+                    saved
+                ) {
+
+                    restaurants.unshift(
+                        saved
+                    );
+
+
+                    console.log(
+                        "☁️ 新餐廳已同步到 Supabase"
+                    );
+
+                }
+
+                else {
+
+                    restaurants.unshift(
+                        newRestaurant
+                    );
+
+
+                    alert(
+                        "餐廳已暫存，但無法同步到 Supabase。"
+                    );
+
+                }
+
+            }
+
+
+            // Local fallback
+
+            else {
+
+                restaurants.unshift(
+                    newRestaurant
+                );
+
+            }
+
+
+            saveRestaurantsLocal();
+
+            renderRestaurants();
+
+            closeRestaurantModal();
 
         }
-
-
-        saveRestaurants();
-
-        renderRestaurants();
-
-        closeRestaurantModal();
 
 
         window.scrollTo({
@@ -1040,21 +1739,27 @@ function showRestaurantDetail(
                     <button
                         class="detail-map-button"
                     >
+
                         📍 Google Maps
+
                     </button>
 
 
                     <button
                         class="detail-edit-button"
                     >
+
                         ✏️ 編輯餐廳
+
                     </button>
 
 
                     <button
                         class="detail-delete-button"
                     >
+
                         🗑️ 刪除餐廳
+
                     </button>
 
                 </div>
@@ -1109,6 +1814,7 @@ function showRestaurantDetail(
 
                 overlay.remove();
 
+
                 openMenuViewer(
                     restaurant
                 );
@@ -1157,6 +1863,7 @@ function showRestaurantDetail(
             () => {
 
                 overlay.remove();
+
 
                 openEditRestaurant(
                     restaurant
@@ -1303,19 +2010,26 @@ function openEditRestaurant(
 // Delete Restaurant
 // ==================================================
 
-function deleteRestaurant(
+async function deleteRestaurant(
     id
 ) {
 
     const restaurant =
         restaurants.find(
             restaurant =>
-                restaurant.id === id
+                String(
+                    restaurant.id
+                ) ===
+                String(id)
         );
 
 
-    if (!restaurant) {
+    if (
+        !restaurant
+    ) {
+
         return;
+
     }
 
 
@@ -1325,21 +2039,55 @@ function deleteRestaurant(
         );
 
 
-    if (!confirmed) {
+    if (
+        !confirmed
+    ) {
+
         return;
+
     }
 
+
+    // Local
 
     restaurants =
         restaurants.filter(
             restaurant =>
-                restaurant.id !== id
+                String(
+                    restaurant.id
+                ) !==
+                String(id)
         );
 
 
-    saveRestaurants();
+    saveRestaurantsLocal();
 
     renderRestaurants();
+
+
+    // Supabase
+
+    if (
+        supabaseConnected
+    ) {
+
+        const success =
+            await deleteRestaurantFromSupabase(
+                id
+            );
+
+
+        if (
+            !success
+        ) {
+
+            alert(
+                "本機已刪除，但雲端刪除失敗。"
+            );
+
+        }
+
+    }
 
 }
 
@@ -1370,8 +2118,12 @@ function initializeMenuPreview() {
     menuInputs.forEach(
         (input, index) => {
 
-            if (!input) {
+            if (
+                !input
+            ) {
+
                 return;
+
             }
 
 
@@ -1408,12 +2160,18 @@ function updateMenuPreview(
         );
 
 
-    if (!preview) {
+    if (
+        !preview
+    ) {
+
         return;
+
     }
 
 
-    if (!imageUrl) {
+    if (
+        !imageUrl
+    ) {
 
         preview.innerHTML = `
 
@@ -1457,52 +2215,58 @@ function updateMenuPreview(
         new Image();
 
 
-    image.onload = () => {
+    image.onload =
+        () => {
 
-        preview.innerHTML = "";
-
-        image.alt =
-            `菜單 ${menuNumber}`;
-
-        image.className =
-            "menu-preview-image";
-
-        preview.appendChild(
-            image
-        );
-
-    };
+            preview.innerHTML =
+                "";
 
 
-    image.onerror = () => {
+            image.alt =
+                `菜單 ${menuNumber}`;
 
-        preview.innerHTML = `
 
-            <div class="menu-preview-error">
+            image.className =
+                "menu-preview-image";
 
-                <div
-                    class="menu-preview-error-icon"
-                >
-                    ⚠️
+
+            preview.appendChild(
+                image
+            );
+
+        };
+
+
+    image.onerror =
+        () => {
+
+            preview.innerHTML = `
+
+                <div class="menu-preview-error">
+
+                    <div
+                        class="menu-preview-error-icon"
+                    >
+                        ⚠️
+                    </div>
+
+                    <div
+                        class="menu-preview-error-title"
+                    >
+                        圖片無法載入
+                    </div>
+
+                    <div
+                        class="menu-preview-error-text"
+                    >
+                        請確認圖片網址是否正確
+                    </div>
+
                 </div>
 
-                <div
-                    class="menu-preview-error-title"
-                >
-                    圖片無法載入
-                </div>
+            `;
 
-                <div
-                    class="menu-preview-error-text"
-                >
-                    請確認圖片網址是否正確
-                </div>
-
-            </div>
-
-        `;
-
-    };
+        };
 
 
     image.src =
@@ -1525,12 +2289,17 @@ function clearMenuImage(
         );
 
 
-    if (!input) {
+    if (
+        !input
+    ) {
+
         return;
+
     }
 
 
-    input.value = "";
+    input.value =
+        "";
 
 
     updateMenuPreview(
@@ -1639,7 +2408,6 @@ function openMenuViewer(
 
 
         <div class="menu-main-viewer">
-
 
             <button
                 class="menu-nav menu-prev"
@@ -1760,7 +2528,8 @@ function openMenuViewer(
         );
 
 
-    let currentIndex = 0;
+    let currentIndex =
+        0;
 
 
     function updateMenu(
@@ -1786,9 +2555,7 @@ function openMenuViewer(
 
 
         mainImage.alt =
-            `${restaurant.name} 菜單 ${
-                currentIndex + 1
-            }`;
+            `${restaurant.name} 菜單 ${currentIndex + 1}`;
 
 
         currentPage.textContent =
@@ -1796,12 +2563,15 @@ function openMenuViewer(
 
 
         thumbnails.forEach(
-            (thumbnail, thumbnailIndex) => {
+            (
+                thumbnail,
+                thumbnailIndex
+            ) => {
 
                 thumbnail.classList.toggle(
                     "active",
                     thumbnailIndex ===
-                    currentIndex
+                        currentIndex
                 );
 
             }
@@ -1814,7 +2584,7 @@ function openMenuViewer(
 
         nextButton.disabled =
             currentIndex ===
-            menuImages.length - 1;
+                menuImages.length - 1;
 
 
         if (
@@ -1825,11 +2595,14 @@ function openMenuViewer(
                 currentIndex
             ].scrollIntoView({
 
-                behavior: "smooth",
+                behavior:
+                    "smooth",
 
-                block: "nearest",
+                block:
+                    "nearest",
 
-                inline: "center"
+                inline:
+                    "center"
 
             });
 
@@ -1837,8 +2610,6 @@ function openMenuViewer(
 
     }
 
-
-    // Previous
 
     prevButton.addEventListener(
         "click",
@@ -1852,8 +2623,6 @@ function openMenuViewer(
     );
 
 
-    // Next
-
     nextButton.addEventListener(
         "click",
         () => {
@@ -1865,8 +2634,6 @@ function openMenuViewer(
         }
     );
 
-
-    // Thumbnail
 
     thumbnails.forEach(
         thumbnail => {
@@ -1888,9 +2655,12 @@ function openMenuViewer(
     );
 
 
+    // ==================================================
     // Swipe
+    // ==================================================
 
-    let touchStartX = 0;
+    let touchStartX =
+        0;
 
 
     imageStage.addEventListener(
@@ -1950,7 +2720,9 @@ function openMenuViewer(
     );
 
 
+    // ==================================================
     // Fullscreen
+    // ==================================================
 
     mainImage.addEventListener(
         "click",
@@ -1966,10 +2738,14 @@ function openMenuViewer(
     );
 
 
+    // ==================================================
     // Close
+    // ==================================================
 
     menuOverlay
-        .querySelector(".menu-close")
+        .querySelector(
+            ".menu-close"
+        )
         .addEventListener(
             "click",
             () => {
@@ -1979,8 +2755,6 @@ function openMenuViewer(
             }
         );
 
-
-    // Background close
 
     menuOverlay.addEventListener(
         "click",
@@ -1999,7 +2773,9 @@ function openMenuViewer(
     );
 
 
+    // ==================================================
     // Keyboard
+    // ==================================================
 
     function keyboardHandler(
         event
@@ -2036,6 +2812,7 @@ function openMenuViewer(
 
             menuOverlay.remove();
 
+
             document.removeEventListener(
                 "keydown",
                 keyboardHandler
@@ -2059,10 +2836,6 @@ function openMenuViewer(
 
 // ==================================================
 // Fullscreen Menu Image
-// ==================================================
-
-// ==================================================
-// Fullscreen Menu Image
 // Real Pinch Zoom + Pan + Double Tap
 // ==================================================
 
@@ -2076,55 +2849,65 @@ function openFullscreenMenuImage(
         startIndex;
 
 
-    // ==================================================
-    // Zoom State
-    // ==================================================
-
-    let scale = 1;
-
-    let translateX = 0;
-
-    let translateY = 0;
+    let scale =
+        1;
 
 
-    const MIN_SCALE = 1;
-
-    const MAX_SCALE = 4;
-
-
-    // ==================================================
-    // Touch State
-    // ==================================================
-
-    let touches = [];
-
-    let isPinching = false;
-
-    let isDragging = false;
-
-    let lastTouchX = 0;
-
-    let lastTouchY = 0;
-
-    let pinchStartDistance = 0;
-
-    let pinchStartScale = 1;
-
-    let pinchCenterX = 0;
-
-    let pinchCenterY = 0;
+    let translateX =
+        0;
 
 
-    // ==================================================
-    // Double Tap
-    // ==================================================
-
-    let lastTapTime = 0;
+    let translateY =
+        0;
 
 
-    // ==================================================
-    // Create Viewer
-    // ==================================================
+    const MIN_SCALE =
+        1;
+
+
+    const MAX_SCALE =
+        4;
+
+
+    let touches =
+        [];
+
+
+    let isPinching =
+        false;
+
+
+    let isDragging =
+        false;
+
+
+    let lastTouchX =
+        0;
+
+
+    let lastTouchY =
+        0;
+
+
+    let pinchStartDistance =
+        0;
+
+
+    let pinchStartScale =
+        1;
+
+
+    let pinchCenterX =
+        0;
+
+
+    let pinchCenterY =
+        0;
+
+
+    let lastTapTime =
+        0;
+
 
     const fullscreen =
         document.createElement(
@@ -2196,10 +2979,6 @@ function openFullscreenMenuImage(
     );
 
 
-    // ==================================================
-    // DOM
-    // ==================================================
-
     const image =
         fullscreen.querySelector(
             ".fullscreen-image"
@@ -2236,10 +3015,6 @@ function openFullscreenMenuImage(
         );
 
 
-    // ==================================================
-    // Apply Transform
-    // ==================================================
-
     function applyTransform(
         animate = false
     ) {
@@ -2251,22 +3026,15 @@ function openFullscreenMenuImage(
 
 
         image.style.transform = `
-
             translate(
                 calc(-50% + ${translateX}px),
                 calc(-50% + ${translateY}px)
             )
-
             scale(${scale})
-
         `;
 
     }
 
-
-    // ==================================================
-    // Show Zoom Indicator
-    // ==================================================
 
     let zoomIndicatorTimer;
 
@@ -2302,19 +3070,20 @@ function openFullscreenMenuImage(
     }
 
 
-    // ==================================================
-    // Reset Zoom
-    // ==================================================
-
     function resetZoom(
         animate = true
     ) {
 
-        scale = 1;
+        scale =
+            1;
 
-        translateX = 0;
 
-        translateY = 0;
+        translateX =
+            0;
+
+
+        translateY =
+            0;
 
 
         applyTransform(
@@ -2327,19 +3096,17 @@ function openFullscreenMenuImage(
     }
 
 
-    // ==================================================
-    // Clamp Position
-    // ==================================================
-
     function clampPosition() {
 
         if (
             scale <= 1
         ) {
 
-            translateX = 0;
+            translateX =
+                0;
 
-            translateY = 0;
+            translateY =
+                0;
 
             return;
 
@@ -2367,18 +3134,20 @@ function openFullscreenMenuImage(
         const maxX =
             Math.max(
                 0,
-                (imageWidth -
-                    wrapperWidth) /
-                    2
+                (
+                    imageWidth -
+                    wrapperWidth
+                ) / 2
             );
 
 
         const maxY =
             Math.max(
                 0,
-                (imageHeight -
-                    wrapperHeight) /
-                    2
+                (
+                    imageHeight -
+                    wrapperHeight
+                ) / 2
             );
 
 
@@ -2404,14 +3173,12 @@ function openFullscreenMenuImage(
     }
 
 
-    // ==================================================
-    // Set Zoom
-    // ==================================================
-
     function setZoom(
         newScale,
-        centerX = imageWrapper.clientWidth / 2,
-        centerY = imageWrapper.clientHeight / 2
+        centerX =
+            imageWrapper.clientWidth / 2,
+        centerY =
+            imageWrapper.clientHeight / 2
     ) {
 
         const oldScale =
@@ -2429,15 +3196,14 @@ function openFullscreenMenuImage(
 
 
         if (
-            newScale === oldScale
+            newScale ===
+            oldScale
         ) {
 
             return;
 
         }
 
-
-        // Zoom toward touch point
 
         const wrapperRect =
             imageWrapper.getBoundingClientRect();
@@ -2489,10 +3255,6 @@ function openFullscreenMenuImage(
     }
 
 
-    // ==================================================
-    // Update Navigation
-    // ==================================================
-
     function updateNavigation() {
 
         prev.disabled =
@@ -2507,10 +3269,6 @@ function openFullscreenMenuImage(
 
     }
 
-
-    // ==================================================
-    // Update Image
-    // ==================================================
 
     function updateFullscreen(
         index
@@ -2540,9 +3298,7 @@ function openFullscreenMenuImage(
 
 
         image.alt =
-            `${restaurantName} 菜單 ${
-                currentIndex + 1
-            }`;
+            `${restaurantName} 菜單 ${currentIndex + 1}`;
 
 
         counter.textContent =
@@ -2553,10 +3309,6 @@ function openFullscreenMenuImage(
 
     }
 
-
-    // ==================================================
-    // Previous
-    // ==================================================
 
     prev.addEventListener(
         "click",
@@ -2582,10 +3334,6 @@ function openFullscreenMenuImage(
     );
 
 
-    // ==================================================
-    // Next
-    // ==================================================
-
     next.addEventListener(
         "click",
         event => {
@@ -2610,10 +3358,6 @@ function openFullscreenMenuImage(
     );
 
 
-    // ==================================================
-    // Close
-    // ==================================================
-
     fullscreen
         .querySelector(
             ".fullscreen-close"
@@ -2627,10 +3371,6 @@ function openFullscreenMenuImage(
             }
         );
 
-
-    // ==================================================
-    // Background Close
-    // ==================================================
 
     fullscreen.addEventListener(
         "click",
@@ -2663,17 +3403,16 @@ function openFullscreenMenuImage(
                 );
 
 
-            // ------------------------------------------
-            // Two fingers
-            // ------------------------------------------
-
             if (
                 touches.length === 2
             ) {
 
-                isPinching = true;
+                isPinching =
+                    true;
 
-                isDragging = false;
+
+                isDragging =
+                    false;
 
 
                 pinchStartDistance =
@@ -2710,17 +3449,16 @@ function openFullscreenMenuImage(
             }
 
 
-            // ------------------------------------------
-            // One finger
-            // ------------------------------------------
-
             if (
                 touches.length === 1
             ) {
 
-                isDragging = true;
+                isDragging =
+                    true;
 
-                isPinching = false;
+
+                isPinching =
+                    false;
 
 
                 lastTouchX =
@@ -2753,10 +3491,6 @@ function openFullscreenMenuImage(
                 );
 
 
-            // ------------------------------------------
-            // Pinch
-            // ------------------------------------------
-
             if (
                 touches.length === 2 &&
                 isPinching
@@ -2777,22 +3511,16 @@ function openFullscreenMenuImage(
                     pinchStartDistance;
 
 
-                const newScale =
-                    pinchStartScale *
-                    distanceRatio;
-
-
                 scale =
                     Math.max(
                         MIN_SCALE,
                         Math.min(
                             MAX_SCALE,
-                            newScale
+                            pinchStartScale *
+                            distanceRatio
                         )
                     );
 
-
-                // Move zoom center
 
                 const center =
                     getTouchCenter(
@@ -2815,10 +3543,6 @@ function openFullscreenMenuImage(
                     wrapperRect.top;
 
 
-                const oldScale =
-                    pinchStartScale;
-
-
                 const pointX =
                     centerX -
                     wrapperRect.width / 2;
@@ -2831,32 +3555,25 @@ function openFullscreenMenuImage(
 
                 const ratio =
                     scale /
-                    oldScale;
+                    pinchStartScale;
 
 
                 translateX =
-                    pinchCenterX -
-                    wrapperRect.left -
-                    wrapperRect.width / 2;
+                    pointX -
+                    (
+                        pointX -
+                        translateX
+                    ) *
+                    ratio;
 
 
                 translateY =
-                    pinchCenterY -
-                    wrapperRect.top -
-                    wrapperRect.height / 2;
-
-
-                if (
-                    oldScale !== 1
-                ) {
-
-                    translateX *=
-                        ratio;
-
-                    translateY *=
-                        ratio;
-
-                }
+                    pointY -
+                    (
+                        pointY -
+                        translateY
+                    ) *
+                    ratio;
 
 
                 clampPosition();
@@ -2870,10 +3587,6 @@ function openFullscreenMenuImage(
 
             }
 
-
-            // ------------------------------------------
-            // One finger drag
-            // ------------------------------------------
 
             if (
                 touches.length === 1 &&
@@ -2892,22 +3605,14 @@ function openFullscreenMenuImage(
                     touches[0].clientY;
 
 
-                const deltaX =
+                translateX +=
                     currentX -
                     lastTouchX;
 
 
-                const deltaY =
+                translateY +=
                     currentY -
                     lastTouchY;
-
-
-                translateX +=
-                    deltaX;
-
-
-                translateY +=
-                    deltaY;
 
 
                 lastTouchX =
@@ -2945,16 +3650,13 @@ function openFullscreenMenuImage(
                 );
 
 
-            // ------------------------------------------
-            // Finish pinch
-            // ------------------------------------------
-
             if (
                 isPinching &&
                 touches.length < 2
             ) {
 
-                isPinching = false;
+                isPinching =
+                    false;
 
 
                 if (
@@ -2978,15 +3680,12 @@ function openFullscreenMenuImage(
             }
 
 
-            // ------------------------------------------
-            // Finish dragging
-            // ------------------------------------------
-
             if (
                 touches.length === 0
             ) {
 
-                isDragging = false;
+                isDragging =
+                    false;
 
             }
 
@@ -3005,11 +3704,16 @@ function openFullscreenMenuImage(
         "touchcancel",
         () => {
 
-            touches = [];
+            touches =
+                [];
 
-            isPinching = false;
 
-            isDragging = false;
+            isPinching =
+                false;
+
+
+            isDragging =
+                false;
 
         },
         {
@@ -3083,25 +3787,22 @@ function openFullscreenMenuImage(
                         rect.top;
 
 
-                    scale = 2;
-
-
-                    const pointX =
-                        x -
-                        rect.width / 2;
-
-
-                    const pointY =
-                        y -
-                        rect.height / 2;
+                    scale =
+                        2;
 
 
                     translateX =
-                        -pointX;
+                        -(
+                            x -
+                            rect.width / 2
+                        );
 
 
                     translateY =
-                        -pointY;
+                        -(
+                            y -
+                            rect.height / 2
+                        );
 
 
                     clampPosition();
@@ -3124,7 +3825,7 @@ function openFullscreenMenuImage(
 
 
     // ==================================================
-    // Mouse Wheel Zoom
+    // Mouse Wheel
     // ==================================================
 
     imageWrapper.addEventListener(
@@ -3155,7 +3856,8 @@ function openFullscreenMenuImage(
 
 
             setZoom(
-                scale * zoomAmount,
+                scale *
+                zoomAmount,
                 x,
                 y
             );
@@ -3181,6 +3883,7 @@ function openFullscreenMenuImage(
         ) {
 
             fullscreen.remove();
+
 
             document.removeEventListener(
                 "keydown",
@@ -3230,11 +3933,8 @@ function openFullscreenMenuImage(
 
 
         if (
-            event.key ===
-            "+"
-            ||
-            event.key ===
-            "="
+            event.key === "+" ||
+            event.key === "="
         ) {
 
             setZoom(
@@ -3245,8 +3945,7 @@ function openFullscreenMenuImage(
 
 
         if (
-            event.key ===
-            "-"
+            event.key === "-"
         ) {
 
             setZoom(
@@ -3257,8 +3956,7 @@ function openFullscreenMenuImage(
 
 
         if (
-            event.key ===
-            "0"
+            event.key === "0"
         ) {
 
             resetZoom();
@@ -3274,10 +3972,6 @@ function openFullscreenMenuImage(
     );
 
 
-    // ==================================================
-    // Image Load
-    // ==================================================
-
     image.addEventListener(
         "load",
         () => {
@@ -3289,10 +3983,6 @@ function openFullscreenMenuImage(
         }
     );
 
-
-    // ==================================================
-    // Helpers
-    // ==================================================
 
     function getDistance(
         touch1,
@@ -3341,10 +4031,6 @@ function openFullscreenMenuImage(
     }
 
 
-    // ==================================================
-    // Initial
-    // ==================================================
-
     updateFullscreen(
         currentIndex
     );
@@ -3360,36 +4046,74 @@ initializeMenuPreview();
 
 initializeMenuRemoveButtons();
 
+
 // ==================================================
-// Supabase Test
+// Supabase Connection Test
 // ==================================================
 
 async function testSupabaseConnection() {
 
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .from("restaurants")
-        .select("*");
+    try {
 
-    if (error) {
-
-        console.error(
-            "Supabase 連線失敗：",
+        const {
+            data,
             error
+        } =
+            await supabaseClient
+                .from("restaurants")
+                .select("id")
+                .limit(1);
+
+
+        if (
+            error
+        ) {
+
+            console.error(
+                "❌ Supabase 連線 / 查詢失敗：",
+                error
+            );
+
+
+            supabaseConnected =
+                false;
+
+
+            return false;
+
+        }
+
+
+        console.log(
+            "✅ Supabase 連線成功！",
+            data
         );
 
-        return;
+
+        supabaseConnected =
+            true;
+
+
+        return true;
 
     }
 
+    catch (
+        error
+    ) {
 
-    console.log(
-        "Supabase 連線成功！",
-        data
-    );
+        console.error(
+            "❌ Supabase Failed to Fetch：",
+            error
+        );
+
+
+        supabaseConnected =
+            false;
+
+
+        return false;
+
+    }
 
 }
-
-testSupabaseConnection();

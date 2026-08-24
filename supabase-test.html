@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Supabase 測試</title>
+
+    <style>
+
+        body {
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+
+            padding: 24px;
+
+            background: #f5f5f5;
+
+            color: #222;
+        }
+
+
+        h1 {
+            margin-bottom: 24px;
+        }
+
+
+        .box {
+
+            background: white;
+
+            border-radius: 16px;
+
+            padding: 20px;
+
+            margin-bottom: 16px;
+
+            box-shadow:
+                0 4px 20px
+                rgba(0, 0, 0, 0.08);
+        }
+
+
+        button {
+
+            width: 100%;
+
+            padding: 14px;
+
+            margin-top: 10px;
+
+            border: none;
+
+            border-radius: 10px;
+
+            background: #111;
+
+            color: white;
+
+            font-size: 16px;
+
+            cursor: pointer;
+        }
+
+
+        button:active {
+
+            transform: scale(0.98);
+
+        }
+
+
+        #status {
+
+            margin-top: 16px;
+
+            padding: 16px;
+
+            border-radius: 10px;
+
+            background: #eee;
+
+            white-space: pre-wrap;
+
+            word-break: break-word;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+    <h1>Supabase 測試</h1>
+
+
+    <div class="box">
+
+        <h2>① 測試連線</h2>
+
+        <button
+            onclick="testConnection()"
+        >
+            測試 Supabase 連線
+        </button>
+
+    </div>
+
+
+    <div class="box">
+
+        <h2>② 讀取餐廳</h2>
+
+        <button
+            onclick="readRestaurants()"
+        >
+            讀取 restaurants
+        </button>
+
+    </div>
+
+
+    <div class="box">
+
+        <h2>③ 新增測試餐廳</h2>
+
+        <button
+            onclick="insertRestaurant()"
+        >
+            新增測試資料
+        </button>
+
+    </div>
+
+
+    <div class="box">
+
+        <h2>測試結果</h2>
+
+        <div id="status">
+            尚未測試
+        </div>
+
+    </div>
+
+
+    <!-- Supabase JavaScript SDK -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+
+    <script>
+
+        // ==========================================
+        // 你的 Supabase 設定
+        // ==========================================
+
+        const SUPABASE_URL =
+            "https://rcyqxzerhpdneagmjwjf.supabase.co";
+
+
+        const SUPABASE_PUBLISHABLE_KEY =
+            "sb_publishable_UykY-RJm0HyKtmJkkE9CWg_CDFpwlHJ";
+
+
+        // ==========================================
+        // 建立 Supabase Client
+        // ==========================================
+
+        const supabaseClient =
+            window.supabase.createClient(
+                SUPABASE_URL,
+                SUPABASE_PUBLISHABLE_KEY
+            );
+
+
+        // ==========================================
+        // 顯示測試結果
+        // ==========================================
+
+        function showStatus(message) {
+
+            document.getElementById("status").textContent =
+                message;
+
+        }
+
+
+        // ==========================================
+        // ① 測試連線
+        // ==========================================
+
+        async function testConnection() {
+
+            showStatus(
+                "正在測試 Supabase..."
+            );
+
+
+            try {
+
+                const {
+                    data,
+                    error
+                } = await supabaseClient
+                    .from("restaurants")
+                    .select("*")
+                    .limit(1);
+
+
+                if (error) {
+
+                    console.error(
+                        "Supabase Error:",
+                        error
+                    );
+
+
+                    showStatus(
+                        "❌ Supabase 連線 / 查詢失敗\n\n" +
+                        "錯誤訊息：\n" +
+                        error.message
+                    );
+
+
+                    return;
+
+                }
+
+
+                console.log(
+                    "Supabase connection success:",
+                    data
+                );
+
+
+                showStatus(
+                    "✅ Supabase 連線成功！\n\n" +
+                    "restaurants 查詢成功。\n\n" +
+                    "目前資料：\n" +
+                    JSON.stringify(
+                        data,
+                        null,
+                        2
+                    )
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    error
+                );
+
+
+                showStatus(
+                    "❌ 發生 JavaScript 錯誤\n\n" +
+                    error.message
+                );
+
+            }
+
+        }
+
+
+        // ==========================================
+        // ② 讀取所有餐廳
+        // ==========================================
+
+        async function readRestaurants() {
+
+            showStatus(
+                "正在讀取餐廳..."
+            );
+
+
+            try {
+
+                const {
+                    data,
+                    error
+                } = await supabaseClient
+                    .from("restaurants")
+                    .select("*")
+                    .order(
+                        "created_at",
+                        {
+                            ascending: false
+                        }
+                    );
+
+
+                if (error) {
+
+                    console.error(
+                        error
+                    );
+
+
+                    showStatus(
+                        "❌ 讀取失敗\n\n" +
+                        error.message
+                    );
+
+
+                    return;
+
+                }
+
+
+                console.log(
+                    "Restaurants:",
+                    data
+                );
+
+
+                showStatus(
+                    "✅ 讀取成功！\n\n" +
+                    "共有 " +
+                    data.length +
+                    " 筆餐廳資料。\n\n" +
+                    JSON.stringify(
+                        data,
+                        null,
+                        2
+                    )
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    error
+                );
+
+
+                showStatus(
+                    "❌ JavaScript 錯誤\n\n" +
+                    error.message
+                );
+
+            }
+
+        }
+
+
+        // ==========================================
+        // ③ 新增測試餐廳
+        // ==========================================
+
+        async function insertRestaurant() {
+
+            showStatus(
+                "正在新增測試餐廳..."
+            );
+
+
+            try {
+
+                const {
+                    data,
+                    error
+                } = await supabaseClient
+                    .from("restaurants")
+                    .insert({
+
+                        name:
+                            "Supabase 測試餐廳",
+
+                        category:
+                            "測試",
+
+                        description:
+                            "這是一筆 Supabase 測試資料",
+
+                        phone:
+                            "0900000000",
+
+                        opening_hours:
+                            "11:00 - 21:00",
+
+                        google_maps_url:
+                            "",
+
+                        restaurant_image_url:
+                            "",
+
+                        favorite:
+                            false,
+
+                        notes:
+                            "這筆資料是用來測試 Supabase。"
+
+                    })
+                    .select();
+
+
+                if (error) {
+
+                    console.error(
+                        "Insert Error:",
+                        error
+                    );
+
+
+                    showStatus(
+                        "❌ 新增失敗\n\n" +
+                        error.message
+                    );
+
+
+                    return;
+
+                }
+
+
+                console.log(
+                    "Insert success:",
+                    data
+                );
+
+
+                showStatus(
+                    "✅ 新增成功！\n\n" +
+                    JSON.stringify(
+                        data,
+                        null,
+                        2
+                    )
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    error
+                );
+
+
+                showStatus(
+                    "❌ JavaScript 錯誤\n\n" +
+                    error.message
+                );
+
+            }
+
+        }
+
+    </script>
+
+</body>
+
+</html>
