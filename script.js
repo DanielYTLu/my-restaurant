@@ -4453,7 +4453,146 @@ if (
     );
 
 }
+// ==================================================
+// Upload Restaurant Image to Supabase Storage
+// ==================================================
 
+async function uploadRestaurantImage(file) {
+
+    // 沒有選圖片
+    if (!file) {
+
+        console.log("📷 沒有新的餐廳圖片");
+
+        return null;
+
+    }
+
+
+    // 確認是不是圖片
+    if (!file.type.startsWith("image/")) {
+
+        alert("請選擇圖片檔案。");
+
+        return null;
+
+    }
+
+
+    try {
+
+        // ==================================================
+        // 建立唯一檔名
+        // ==================================================
+
+        const fileExtension =
+            file.name.split(".").pop();
+
+        const fileName =
+            `${Date.now()}-${Math.random()
+                .toString(36)
+                .substring(2, 10)}.${fileExtension}`;
+
+
+        console.log(
+            "📤 開始上傳餐廳圖片：",
+            fileName
+        );
+
+
+        // ==================================================
+        // 上傳到 Supabase Storage
+        // ==================================================
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .storage
+                .from("restaurant-images")
+                .upload(
+                    fileName,
+                    file,
+                    {
+                        cacheControl: "3600",
+                        upsert: false
+                    }
+                );
+
+
+        // ==================================================
+        // 上傳失敗
+        // ==================================================
+
+        if (error) {
+
+            console.error(
+                "❌ 餐廳圖片上傳失敗：",
+                error
+            );
+
+            alert(
+                "❌ 圖片上傳失敗：" +
+                error.message
+            );
+
+            return null;
+
+        }
+
+
+        console.log(
+            "✅ 圖片成功上傳：",
+            data
+        );
+
+
+        // ==================================================
+        // 取得公開網址
+        // ==================================================
+
+        const {
+            data: publicUrlData
+        } =
+            supabaseClient
+                .storage
+                .from("restaurant-images")
+                .getPublicUrl(
+                    fileName
+                );
+
+
+        const imageUrl =
+            publicUrlData.publicUrl;
+
+
+        console.log(
+            "🌐 圖片網址：",
+            imageUrl
+        );
+
+
+        return imageUrl;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ 圖片上傳發生錯誤：",
+            error
+        );
+
+        alert(
+            "❌ 圖片上傳失敗，請檢查網路連線。"
+        );
+
+        return null;
+
+    }
+
+}
 // ==================================================
 // Supabase Connection Test
 // ==================================================
