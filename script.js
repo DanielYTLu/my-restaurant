@@ -1423,7 +1423,7 @@ console.log(
                 ).value.trim()
 
         };
-
+        console.log("⭐ 表單取得的評分：", document.getElementById("restaurantRating").value);
 
         // ==================================================
         // EDIT
