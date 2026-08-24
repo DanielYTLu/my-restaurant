@@ -2065,6 +2065,10 @@ function openEditRestaurant(
         restaurant.id;
 
 
+    // ==================================================
+    // 基本資料
+    // ==================================================
+
     document.getElementById(
         "restaurantName"
     ).value =
@@ -2080,14 +2084,78 @@ function openEditRestaurant(
     document.getElementById(
         "restaurantRating"
     ).value =
-        restaurant.rating || "";
+        restaurant.rating ?? "";
 
 
-    document.getElementById(
-        "restaurantImage"
-    ).value =
+    // ==================================================
+    // 餐廳圖片
+    // ==================================================
+
+    const imageInput =
+        document.getElementById(
+            "restaurantImage"
+        );
+
+    const imagePreview =
+        document.getElementById(
+            "restaurantImagePreview"
+        );
+
+
+    // File input 不能直接填入圖片 URL
+    imageInput.value = "";
+
+
+    // 儲存目前餐廳原本的圖片 URL
+    restaurantForm.dataset.currentImage =
         restaurant.image || "";
 
+
+    // 顯示原本的圖片
+    if (
+        restaurant.image
+    ) {
+
+        imagePreview.innerHTML = `
+
+            <img
+                src="${restaurant.image}"
+                alt="目前餐廳圖片"
+                style="
+                    width:100%;
+                    max-height:300px;
+                    object-fit:cover;
+                    border-radius:12px;
+                    display:block;
+                "
+            >
+
+            <p>
+                目前餐廳圖片
+            </p>
+
+        `;
+
+    }
+
+    else {
+
+        imagePreview.innerHTML = `
+
+            <span>📷</span>
+
+            <p>
+                尚未選擇圖片
+            </p>
+
+        `;
+
+    }
+
+
+    // ==================================================
+    // 聯絡資訊
+    // ==================================================
 
     document.getElementById(
         "restaurantPhone"
@@ -2107,17 +2175,29 @@ function openEditRestaurant(
         restaurant.hours || "";
 
 
+    // ==================================================
+    // Google Maps
+    // ==================================================
+
     document.getElementById(
         "restaurantMaps"
     ).value =
         restaurant.maps || "";
 
 
+    // ==================================================
+    // 備註
+    // ==================================================
+
     document.getElementById(
         "restaurantDescription"
     ).value =
         restaurant.description || "";
 
+
+    // ==================================================
+    // 菜單圖片
+    // ==================================================
 
     const menuImages =
         restaurant.menuImages || [];
@@ -4268,10 +4348,14 @@ initializeMenuRemoveButtons();
 // ==================================================
 
 const restaurantImageInput =
-    document.getElementById("restaurantImage");
+    document.getElementById(
+        "restaurantImage"
+    );
 
 const restaurantImagePreview =
-    document.getElementById("restaurantImagePreview");
+    document.getElementById(
+        "restaurantImagePreview"
+    );
 
 
 if (
@@ -4283,15 +4367,6 @@ if (
         "change",
         function () {
 
-            console.log(
-                "🖼️ 圖片選擇事件觸發"
-            );
-
-
-            // ==================================================
-            // 取得檔案
-            // ==================================================
-
             const file =
                 this.files &&
                 this.files.length > 0
@@ -4300,7 +4375,7 @@ if (
 
 
             console.log(
-                "📁 選擇的檔案：",
+                "🖼️ 選擇圖片：",
                 file
             );
 
@@ -4309,22 +4384,9 @@ if (
             // 沒有選擇圖片
             // ==================================================
 
-            if (!file) {
-
-                console.log(
-                    "⚠️ 沒有選擇圖片"
-                );
-
-
-                restaurantImagePreview.innerHTML = `
-
-                    <span>📷</span>
-
-                    <p>
-                        尚未選擇圖片
-                    </p>
-
-                `;
+            if (
+                !file
+            ) {
 
                 return;
 
@@ -4336,25 +4398,16 @@ if (
             // ==================================================
 
             if (
-                !file.type ||
-                !file.type.startsWith("image/")
+                !file.type.startsWith(
+                    "image/"
+                )
             ) {
 
                 alert(
-                    "請選擇 JPG、PNG、WEBP 等圖片檔案。"
+                    "請選擇圖片檔案。"
                 );
 
                 this.value = "";
-
-                restaurantImagePreview.innerHTML = `
-
-                    <span>❌</span>
-
-                    <p>
-                        檔案格式不正確
-                    </p>
-
-                `;
 
                 return;
 
@@ -4362,11 +4415,13 @@ if (
 
 
             // ==================================================
-            // 建立圖片預覽
+            // 建立預覽
             // ==================================================
 
             const imageURL =
-                URL.createObjectURL(file);
+                URL.createObjectURL(
+                    file
+                );
 
 
             restaurantImagePreview.innerHTML = `
@@ -4391,30 +4446,7 @@ if (
 
 
             console.log(
-                "✅ 圖片預覽成功：",
-                file.name
-            );
-
-
-            // ==================================================
-            // 確認 FileList 沒有被清除
-            // ==================================================
-
-            setTimeout(
-                () => {
-
-                    console.log(
-                        "📁 目前 FileList：",
-                        restaurantImageInput.files
-                    );
-
-                    console.log(
-                        "📁 目前檔案數量：",
-                        restaurantImageInput.files.length
-                    );
-
-                },
-                100
+                "✅ 圖片預覽成功"
             );
 
         }
