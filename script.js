@@ -2331,19 +2331,17 @@ async function deleteRestaurant(
 
 
 // ==================================================
-// Initialize Menu Image Preview
+// Initialize Menu Image Upload
+// 點擊灰色菜單框 → 開啟手機相簿
 // ==================================================
 
 function initializeMenuPreview() {
 
     const menuInputs = [
-
         document.getElementById("restaurantMenu1"),
         document.getElementById("restaurantMenu2"),
         document.getElementById("restaurantMenu3")
-
     ];
-
 
     menuInputs.forEach((input, index) => {
 
@@ -2351,64 +2349,103 @@ function initializeMenuPreview() {
             return;
         }
 
+        const menuNumber = index + 1;
 
-        input.addEventListener("change", () => {
-
-            const file =
-                input.files &&
-                input.files.length > 0
-                    ? input.files[0]
-                    : null;
-
-
-            if (!file) {
-
-                updateMenuPreview(
-                    index + 1,
-                    null
-                );
-
-                return;
-
-            }
-
-
-            // ==================================================
-            // 確認是否為圖片
-            // ==================================================
-
-            if (!file.type.startsWith("image/")) {
-
-                alert("請選擇圖片檔案。");
-
-                input.value = "";
-
-                updateMenuPreview(
-                    index + 1,
-                    null
-                );
-
-                return;
-
-            }
-
-
-            console.log(
-                `📖 菜單 ${index + 1} 選擇圖片：`,
-                file
+        const preview =
+            document.getElementById(
+                `menuPreview${menuNumber}`
             );
 
+        if (!preview) {
+            return;
+        }
 
-            // ==================================================
-            // 顯示圖片預覽
-            // ==================================================
+        // ==================================================
+        // 隱藏原本的「選擇檔案」控制項
+        // ==================================================
 
-            updateMenuPreview(
-                index + 1,
-                file
-            );
+        input.style.display = "none";
 
-        });
+        // ==================================================
+        // 點擊灰色框框
+        // ==================================================
+
+        preview.style.cursor = "pointer";
+
+        preview.addEventListener(
+            "click",
+            () => {
+
+                input.click();
+
+            }
+        );
+
+        // ==================================================
+        // 選擇圖片
+        // ==================================================
+
+        input.addEventListener(
+            "change",
+            () => {
+
+                const file =
+                    input.files &&
+                    input.files.length > 0
+                        ? input.files[0]
+                        : null;
+
+                // 沒有選擇圖片
+                if (!file) {
+
+                    updateMenuPreview(
+                        menuNumber,
+                        null
+                    );
+
+                    return;
+
+                }
+
+                // ==================================================
+                // 確認是否為圖片
+                // ==================================================
+
+                if (
+                    !file.type.startsWith("image/")
+                ) {
+
+                    alert(
+                        "請選擇圖片檔案。"
+                    );
+
+                    input.value = "";
+
+                    updateMenuPreview(
+                        menuNumber,
+                        null
+                    );
+
+                    return;
+
+                }
+
+                console.log(
+                    `📖 菜單 ${menuNumber} 選擇圖片：`,
+                    file
+                );
+
+                // ==================================================
+                // 顯示圖片預覽
+                // ==================================================
+
+                updateMenuPreview(
+                    menuNumber,
+                    file
+                );
+
+            }
+        );
 
     });
 
@@ -2440,25 +2477,24 @@ function updateMenuPreview(
 
     if (!fileOrUrl) {
 
-        preview.innerHTML = `
+    preview.innerHTML = `
 
-            <div class="menu-preview-empty">
+        <div class="menu-preview-empty">
 
-                <span>
-                    📖
-                </span>
+            <span class="menu-upload-icon">
+                📖
+            </span>
 
-                <p>
-                    尚未加入菜單圖片
-                </p>
+            <p>
+                點擊上傳菜單圖片
+            </p>
 
-            </div>
+        </div>
 
-        `;
+    `;
 
-        return;
-
-    }
+    return;
+}
 
 
     // ==================================================
@@ -2481,9 +2517,7 @@ function updateMenuPreview(
                 class="menu-preview-image"
             >
 
-            <p>
-                ${fileOrUrl.name}
-            </p>
+            
 
         `;
 
