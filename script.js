@@ -4209,16 +4209,9 @@ testSupabaseConnection();
 // Load Restaurants From Supabase
 // ==================================================
 
-// ==================================================
-// Load Restaurants From Supabase
-// ==================================================
-
 async function loadRestaurants() {
 
-    console.log(
-        "正在從 Supabase 讀取餐廳資料..."
-    );
-
+    console.log("☁️ 正在從 Supabase 讀取餐廳資料...");
 
     const {
         data,
@@ -4226,16 +4219,13 @@ async function loadRestaurants() {
     } = await supabaseClient
         .from("restaurants")
         .select("*")
-        .order(
-            "created_at",
-            {
-                ascending: false
-            }
-        );
+        .order("created_at", {
+            ascending: false
+        });
 
 
     // ==================================================
-    // Supabase Error
+    // Supabase 讀取失敗
     // ==================================================
 
     if (error) {
@@ -4243,10 +4233,6 @@ async function loadRestaurants() {
         console.error(
             "❌ Supabase 讀取餐廳失敗：",
             error
-        );
-
-        alert(
-            "無法讀取 Supabase 餐廳資料，請開啟 F12 查看錯誤。"
         );
 
         return;
@@ -4261,137 +4247,119 @@ async function loadRestaurants() {
 
 
     // ==================================================
-    // Convert Supabase Data
+    // 將 Supabase 資料轉換成網站使用的格式
     // ==================================================
 
     restaurants =
         (data || []).map(
-            restaurant => {
+            restaurant => ({
 
-                return {
+                // ------------------------------------------
+                // 基本資料
+                // ------------------------------------------
 
-                    // ----------------------------------
-                    // 基本資料
-                    // ----------------------------------
+                id:
+                    restaurant.id,
 
-                    id:
-                        restaurant.id,
+                name:
+                    restaurant.name || "",
 
-                    name:
-                        restaurant.name || "",
-
-
-                    category:
-                        restaurant.category || "",
+                category:
+                    restaurant.category || "",
 
 
-                    // ----------------------------------
-                    // 評分
-                    // ----------------------------------
+                // ------------------------------------------
+                // ⭐ 評分
+                // ------------------------------------------
 
-                    rating:
-                        restaurant.rating !== null &&
-                        restaurant.rating !== undefined &&
-                        restaurant.rating !== ""
-                            ? Number(
-                                restaurant.rating
-                            )
-                            : null,
-
-
-                    // ----------------------------------
-                    // 餐廳圖片
-                    // ----------------------------------
-
-                    image:
-                        restaurant.restaurant_image_url ||
-                        "",
-
-
-                    // ----------------------------------
-                    // 聯絡資訊
-                    // ----------------------------------
-
-                    phone:
-                        restaurant.phone || "",
-
-
-                    // ----------------------------------
-                    // 地址
-                    //
-                    // 注意：
-                    // 目前你的 Supabase 沒有 address 欄位
-                    //
-                    // 所以暫時從 notes / description
-                    // 無法正確判斷地址。
-                    // ----------------------------------
-
-                    address:
-                        restaurant.address ||
-                        "",
-
-
-                    // ----------------------------------
-                    // 營業時間
-                    // ----------------------------------
-
-                    hours:
-                        restaurant.opening_hours ||
-                        "",
-
-
-                    // ----------------------------------
-                    // Google Maps
-                    // ----------------------------------
-
-                    maps:
-                        restaurant.google_maps_url ||
-                        "",
-
-
-                    // ----------------------------------
-                    // 菜單圖片
-                    // ----------------------------------
-
-                    menuImages:
-                        Array.isArray(
-                            restaurant.menu_images
+                rating:
+                    restaurant.rating !== null &&
+                    restaurant.rating !== undefined
+                        ? Number(
+                            restaurant.rating
                         )
-                            ? restaurant.menu_images
-                            : [],
+                        : null,
 
 
-                    // ----------------------------------
-                    // 備註
-                    // ----------------------------------
+                // ------------------------------------------
+                // 🖼️ 餐廳圖片
+                // ------------------------------------------
 
-                    description:
-                    restaurant.notes ||
-                    restaurant.description ||
-                    "",
+                image:
+                    restaurant.restaurant_image_url || "",
 
 
-                    // ----------------------------------
-                    // 收藏
-                    // ----------------------------------
+                // ------------------------------------------
+                // ☎️ 電話
+                // ------------------------------------------
 
-                    favorite:
-                        restaurant.favorite === true
+                phone:
+                    restaurant.phone || "",
 
-                };
 
-            }
+                // ------------------------------------------
+                // 📍 地址
+                // ------------------------------------------
+
+                address:
+                    restaurant.address || "",
+
+
+                // ------------------------------------------
+                // 🕐 營業時間
+                // ------------------------------------------
+
+                hours:
+                    restaurant.opening_hours || "",
+
+
+                // ------------------------------------------
+                // 🗺️ Google Maps
+                // ------------------------------------------
+
+                maps:
+                    restaurant.google_maps_url || "",
+
+
+                // ------------------------------------------
+                // 📖 菜單圖片
+                // ------------------------------------------
+
+                menuImages:
+                    Array.isArray(
+                        restaurant.menu_images
+                    )
+                        ? restaurant.menu_images
+                        : [],
+
+
+                // ------------------------------------------
+                // 📝 備註
+                // ------------------------------------------
+
+                description:
+                    restaurant.notes || "",
+
+
+                // ------------------------------------------
+                // ❤️ 收藏
+                // ------------------------------------------
+
+                favorite:
+                    restaurant.favorite === true
+
+            })
         );
 
 
     console.log(
-        "✅ 網站餐廳資料已更新：",
+        "✅ 轉換後的網站餐廳資料：",
         restaurants
     );
 
 
     // ==================================================
-    // Render
+    // 更新畫面
     // ==================================================
 
     renderRestaurants();
