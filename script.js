@@ -1992,14 +1992,26 @@ async function deleteRestaurant(
         );
 
 
+    // ==================================================
+    // 找不到餐廳
+    // ==================================================
+
     if (
         !restaurant
     ) {
+
+        alert(
+            "找不到要刪除的餐廳。"
+        );
 
         return;
 
     }
 
+
+    // ==================================================
+    // 確認刪除
+    // ==================================================
 
     const confirmed =
         confirm(
@@ -2016,28 +2028,19 @@ async function deleteRestaurant(
     }
 
 
-    // Local
-
-    restaurants =
-        restaurants.filter(
-            restaurant =>
-                String(
-                    restaurant.id
-                ) !==
-                String(id)
-        );
-
-
-    saveRestaurantsLocal();
-
-    renderRestaurants();
-
-
+    // ==================================================
     // Supabase
+    // ==================================================
 
     if (
         supabaseConnected
     ) {
+
+        console.log(
+            "🗑️ 開始從 Supabase 刪除：",
+            id
+        );
+
 
         const success =
             await deleteRestaurantFromSupabase(
@@ -2045,15 +2048,74 @@ async function deleteRestaurant(
             );
 
 
+        // --------------------------------------------------
+        // Supabase 刪除失敗
+        // --------------------------------------------------
+
         if (
             !success
         ) {
 
             alert(
-                "本機已刪除，但雲端刪除失敗。"
+                "❌ 餐廳刪除失敗，請檢查網路連線。"
             );
 
+            return;
+
         }
+
+
+        console.log(
+            "☁️ 餐廳已成功從 Supabase 刪除：",
+            id
+        );
+
+
+        // --------------------------------------------------
+        // 重新讀取 Supabase
+        // --------------------------------------------------
+
+        await loadRestaurants();
+
+
+        // --------------------------------------------------
+        // 更新畫面
+        // --------------------------------------------------
+
+        renderRestaurants();
+
+
+        alert(
+            "✅ 餐廳已成功刪除！"
+        );
+
+    }
+
+
+    // ==================================================
+    // Local fallback
+    // ==================================================
+
+    else {
+
+        restaurants =
+            restaurants.filter(
+                restaurant =>
+                    String(
+                        restaurant.id
+                    ) !==
+                    String(id)
+            );
+
+
+        saveRestaurantsLocal();
+
+        renderRestaurants();
+
+
+        alert(
+            "⚠️ Supabase 尚未連線，目前只從本機刪除。"
+        );
 
     }
 
