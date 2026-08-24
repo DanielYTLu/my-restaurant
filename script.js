@@ -2337,6 +2337,8 @@ async function deleteRestaurant(
 
 function initializeMenuPreview() {
 
+    console.log("🔥 新版 initializeMenuPreview 已載入");
+
     const menuInputs = [
         document.getElementById("restaurantMenu1"),
         document.getElementById("restaurantMenu2"),
@@ -2516,9 +2518,6 @@ function updateMenuPreview(
                 alt="菜單 ${menuNumber}"
                 class="menu-preview-image"
             >
-
-            
-
         `;
 
 
