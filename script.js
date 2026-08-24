@@ -2332,12 +2332,10 @@ async function deleteRestaurant(
 
 // ==================================================
 // Initialize Menu Image Upload
-// 點擊灰色菜單框 → 開啟手機相簿
+// 點擊灰色菜單框 → 開啟圖片選擇器
 // ==================================================
 
 function initializeMenuPreview() {
-
-    console.log("🔥 新版 initializeMenuPreview 已載入");
 
     const menuInputs = [
         document.getElementById("restaurantMenu1"),
@@ -2347,11 +2345,28 @@ function initializeMenuPreview() {
 
     menuInputs.forEach((input, index) => {
 
+        const menuNumber = index + 1;
+
+        console.log(
+            `📖 初始化菜單 ${menuNumber}`
+        );
+
+        // ------------------------------------------
+        // 確認 input
+        // ------------------------------------------
+
         if (!input) {
+
+            console.error(
+                `❌ 找不到 restaurantMenu${menuNumber}`
+            );
+
             return;
         }
 
-        const menuNumber = index + 1;
+        // ------------------------------------------
+        // 找到對應的灰色預覽框
+        // ------------------------------------------
 
         const preview =
             document.getElementById(
@@ -2359,33 +2374,46 @@ function initializeMenuPreview() {
             );
 
         if (!preview) {
+
+            console.error(
+                `❌ 找不到 menuPreview${menuNumber}`
+            );
+
             return;
         }
 
-        // ==================================================
-        // 隱藏原本的「選擇檔案」控制項
-        // ==================================================
+        // ------------------------------------------
+        // 隱藏原本的檔案選擇器
+        // ------------------------------------------
 
         input.style.display = "none";
 
-        // ==================================================
-        // 點擊灰色框框
-        // ==================================================
+        // ------------------------------------------
+        // 灰色框可以點擊
+        // ------------------------------------------
 
         preview.style.cursor = "pointer";
+
+        // ------------------------------------------
+        // 點擊灰色框
+        // ------------------------------------------
 
         preview.addEventListener(
             "click",
             () => {
+
+                console.log(
+                    `📸 點擊菜單 ${menuNumber}`
+                );
 
                 input.click();
 
             }
         );
 
-        // ==================================================
+        // ------------------------------------------
         // 選擇圖片
-        // ==================================================
+        // ------------------------------------------
 
         input.addEventListener(
             "change",
@@ -2397,21 +2425,18 @@ function initializeMenuPreview() {
                         ? input.files[0]
                         : null;
 
-                // 沒有選擇圖片
+                console.log(
+                    `📷 菜單 ${menuNumber} 選擇圖片：`,
+                    file
+                );
+
                 if (!file) {
-
-                    updateMenuPreview(
-                        menuNumber,
-                        null
-                    );
-
                     return;
-
                 }
 
-                // ==================================================
-                // 確認是否為圖片
-                // ==================================================
+                // ----------------------------------
+                // 確認是不是圖片
+                // ----------------------------------
 
                 if (
                     !file.type.startsWith("image/")
@@ -2423,23 +2448,12 @@ function initializeMenuPreview() {
 
                     input.value = "";
 
-                    updateMenuPreview(
-                        menuNumber,
-                        null
-                    );
-
                     return;
-
                 }
 
-                console.log(
-                    `📖 菜單 ${menuNumber} 選擇圖片：`,
-                    file
-                );
-
-                // ==================================================
-                // 顯示圖片預覽
-                // ==================================================
+                // ----------------------------------
+                // 顯示預覽
+                // ----------------------------------
 
                 updateMenuPreview(
                     menuNumber,
