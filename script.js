@@ -846,165 +846,74 @@ function createRestaurantCard(
 // Favorite
 // ==================================================
 
-async function toggleFavorite(
-    id
-) {
+async function toggleFavorite(id) {
 
-    const index =
-        restaurants.findIndex(
-            restaurant =>
-                String(
-                    restaurant.id
-                ) ===
-                String(id)
-        );
+    const index = restaurants.findIndex(
+        restaurant =>
+            String(restaurant.id) === String(id)
+    );
 
-
-    // ==================================================
-    // 找不到餐廳
-    // ==================================================
-
-    if (
-        index === -1
-    ) {
-
-        console.error(
-            "❌ 找不到要收藏的餐廳：",
-            id
-        );
-
+    if (index === -1) {
         return;
-
     }
 
 
-    const restaurant =
-        restaurants[index];
+    // ==================================================
+    // 1. 立即更新畫面
+    // ==================================================
+
+    restaurants[index].favorite =
+        !restaurants[index].favorite;
 
 
-    const newFavorite =
-        !restaurant.favorite;
+    // 先儲存本機
+    saveRestaurantsLocal();
+
+
+    // 立即重新渲染
+    renderRestaurants();
 
 
     // ==================================================
-    // Supabase
+    // 2. 同步 Supabase
     // ==================================================
 
-    if (
-        supabaseConnected
-    ) {
+    if (supabaseConnected) {
 
-        console.log(
-            "❤️ 更新收藏狀態：",
-            restaurant.name,
-            newFavorite
-        );
+        const newFavorite =
+            restaurants[index].favorite;
 
 
         const {
-            data,
             error
-        } =
-            await supabaseClient
-                .from("restaurants")
-                .update({
-
-                    favorite:
-                        newFavorite
-
-                })
-                .eq(
-                    "id",
-                    id
-                )
-                .select()
-                .single();
+        } = await supabaseClient
+            .from("restaurants")
+            .update({
+                favorite: newFavorite
+            })
+            .eq(
+                "id",
+                id
+            );
 
 
-        // --------------------------------------------------
-        // Supabase 更新失敗
-        // --------------------------------------------------
-
-        if (
-            error
-        ) {
+        if (error) {
 
             console.error(
                 "❌ 收藏同步失敗：",
                 error
             );
 
-
-            alert(
-                "❌ 收藏狀態更新失敗，請檢查網路連線。"
-            );
-
-
-            return;
-
         }
 
+        else {
 
-        console.log(
-            "☁️ 收藏狀態已同步：",
-            data
-        );
-
-
-        // --------------------------------------------------
-        // 更新本機資料
-        // --------------------------------------------------
-
-        restaurants[index] = {
-
-            ...restaurants[index],
-
-            favorite:
+            console.log(
+                "☁️ 收藏狀態已同步：",
                 newFavorite
+            );
 
-        };
-
-
-        saveRestaurantsLocal();
-
-
-        // --------------------------------------------------
-        // 立即更新畫面
-        // --------------------------------------------------
-
-        renderRestaurants();
-
-
-        // --------------------------------------------------
-        // 再從 Supabase 讀取一次
-        // 確保資料完全一致
-        // --------------------------------------------------
-
-        await loadRestaurants();
-
-        renderRestaurants();
-
-    }
-
-
-    // ==================================================
-    // Local fallback
-    // ==================================================
-
-    else {
-
-        restaurants[index].favorite =
-            newFavorite;
-
-
-        saveRestaurantsLocal();
-
-        renderRestaurants();
-
-
-        console.log(
-            "📱 Supabase 未連線，目前只更新本機收藏狀態。"
-        );
+        }
 
     }
 
