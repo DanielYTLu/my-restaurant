@@ -24,10 +24,7 @@ const supabaseClient =
 // Local Cache
 // ==================================================
 
-let restaurants =
-    JSON.parse(
-        localStorage.getItem("restaurants")
-    ) || [];
+let restaurants = [];
 
 
 // ==================================================
@@ -86,105 +83,10 @@ initialize();
 
 async function initialize() {
 
-    console.log(
-        "🍽️ Restaurant Management System 初始化中..."
-    );
+    console.log("🚀 餐廳管理系統啟動");
 
-
-    // --------------------------------------------------
-    // 優先從 Supabase 讀取
-    // --------------------------------------------------
-
-    const success =
-        await loadRestaurantsFromSupabase();
-
-
-    // --------------------------------------------------
-    // Supabase 沒資料
-    // --------------------------------------------------
-
-    if (
-        success &&
-        restaurants.length === 0
-    ) {
-
-        console.log(
-            "Supabase 目前沒有餐廳資料"
-        );
-
-
-        // 如果 LocalStorage 有舊資料
-        // 嘗試搬到 Supabase
-
-        if (
-            restaurants.length === 0
-        ) {
-
-            const localRestaurants =
-                JSON.parse(
-                    localStorage.getItem(
-                        "restaurants"
-                    )
-                ) || [];
-
-
-            if (
-                localRestaurants.length > 0
-            ) {
-
-                console.log(
-                    "發現舊的 LocalStorage 資料，準備同步到 Supabase..."
-                );
-
-
-                for (
-                    const restaurant
-                    of localRestaurants
-                ) {
-
-                    await createRestaurantInSupabase(
-                        restaurant
-                    );
-
-                }
-
-
-                await loadRestaurantsFromSupabase();
-
-            }
-
-        }
-
-    }
-
-
-    // --------------------------------------------------
-    // Supabase 連線失敗
-    // --------------------------------------------------
-
-    if (
-        !success
-    ) {
-
-        console.warn(
-            "⚠️ Supabase 無法連線，使用 LocalStorage"
-        );
-
-
-        if (
-            restaurants.length === 0
-        ) {
-
-            restaurants = createDefaultRestaurants();
-
-            saveRestaurantsLocal();
-
-        }
-
-    }
-
-
-    renderRestaurants();
+    // 從 Supabase 載入餐廳
+    await loadRestaurants();
 
 }
 
@@ -484,20 +386,7 @@ function mapRestaurantToSupabase(
 }
 
 
-// ==================================================
-// LocalStorage
-// ==================================================
 
-function saveRestaurantsLocal() {
-
-    localStorage.setItem(
-        "restaurants",
-        JSON.stringify(
-            restaurants
-        )
-    );
-
-}
 
 
 // ==================================================
@@ -4115,5 +4004,102 @@ async function testSupabaseConnection() {
         return false;
 
     }
+
+}
+
+testSupabaseConnection();
+
+
+// ==================================================
+// Load Restaurants From Supabase
+// ==================================================
+
+async function loadRestaurants() {
+
+    console.log("正在從 Supabase 讀取餐廳資料...");
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("restaurants")
+        .select("*")
+        .order("created_at", {
+            ascending: false
+        });
+
+    if (error) {
+
+        console.error(
+            "❌ Supabase 讀取餐廳失敗：",
+            error
+        );
+
+        alert(
+            "無法讀取 Supabase 餐廳資料，請開啟 F12 查看錯誤。"
+        );
+
+        return;
+
+    }
+
+    console.log(
+        "✅ Supabase 餐廳資料：",
+        data
+    );
+
+    restaurants =
+        (data || []).map(
+            restaurant => ({
+
+                id:
+                    restaurant.id,
+
+                name:
+                    restaurant.name || "",
+
+                category:
+                    restaurant.category || "",
+
+                rating:
+                    restaurant.rating || null,
+
+                image:
+                    restaurant.restaurant_image_url || "",
+
+                phone:
+                    restaurant.phone || "",
+
+                address:
+                    restaurant.address || "",
+
+                hours:
+                    restaurant.opening_hours || "",
+
+                maps:
+                    restaurant.google_maps_url || "",
+
+                menuImages:
+                    Array.isArray(
+                        restaurant.menu_images
+                    )
+                        ? restaurant.menu_images
+                        : [],
+
+                description:
+                    restaurant.description || "",
+
+                favorite:
+                    restaurant.favorite || false
+
+            })
+        );
+
+    console.log(
+        "✅ 網站餐廳資料已更新：",
+        restaurants
+    );
+
+    renderRestaurants();
 
 }
