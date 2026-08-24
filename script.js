@@ -1230,6 +1230,7 @@ addRestaurantButton.addEventListener(
     () => {
 
         delete restaurantForm.dataset.editingId;
+        delete restaurantForm.dataset.currentImage;
 
 
         restaurantForm.reset();
@@ -1297,6 +1298,7 @@ function closeRestaurantModal() {
 
 
     delete restaurantForm.dataset.editingId;
+    delete restaurantForm.dataset.currentImage;
 
 
     updateMenuPreview(
@@ -1370,6 +1372,55 @@ console.log(
     "⭐ 表單評分：",
     document.getElementById("restaurantRating").value
 );
+        // ==================================================
+// 取得餐廳圖片檔案
+// ==================================================
+
+const restaurantImageInput =
+    document.getElementById(
+        "restaurantImage"
+    );
+
+const restaurantImageFile =
+    restaurantImageInput &&
+    restaurantImageInput.files.length > 0
+        ? restaurantImageInput.files[0]
+        : null;
+
+
+console.log(
+    "📷 表單選擇的餐廳圖片：",
+    restaurantImageFile
+);
+
+        let restaurantImageUrl =
+            editingId
+                ? restaurantForm.dataset.currentImage || ""
+                : "";
+
+        if (
+            restaurantImageFile
+        ) {
+
+            restaurantImageUrl =
+                await uploadRestaurantImage(
+                    restaurantImageFile
+                );
+
+            if (
+                !restaurantImageUrl
+            ) {
+
+                alert(
+                    "❌ 圖片上傳失敗，餐廳資料未儲存。"
+                );
+
+                return;
+
+            }
+
+        }
+
         const restaurantData = {
 
             name:
@@ -1389,10 +1440,6 @@ console.log(
                     ).value
                 ) || null,
 
-            image:
-                document.getElementById(
-                    "restaurantImage"
-                ).value.trim(),
 
             phone:
                 document.getElementById(
@@ -1413,6 +1460,9 @@ console.log(
                 document.getElementById(
                     "restaurantMaps"
                 ).value.trim(),
+
+            image:
+                restaurantImageUrl,
 
             menuImages:
                 menuImages,
