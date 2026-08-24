@@ -90,115 +90,193 @@
              Categories
         =================================================== -->
 
-        <!-- ==================================================
-     Category Section
-     ================================================== -->
+        <section class="category-section">
 
-<section class="category-section">
-
-    <div class="category-scroll">
-
-        <!-- 全部 -->
-
-        <button
-            class="category active"
-            data-category="全部"
-        >
-            <span class="category-icon">🍽️</span>
-            <span>全部</span>
-        </button>
+            <div class="category-scroll">
 
 
-        <!-- 收藏 -->
+                <!-- 全部 -->
 
-        <button
-            class="category"
-            data-category="收藏"
-        >
-            <span class="category-icon">❤️</span>
-            <span>收藏</span>
-        </button>
+                <button
+                    class="category active"
+                    data-category="全部"
+                    type="button"
+                >
 
+                    <span class="category-icon">
+                        🍽️
+                    </span>
 
-        <!-- 火鍋 -->
+                    <span>
+                        全部
+                    </span>
 
-        <button
-            class="category"
-            data-category="火鍋"
-        >
-            <span class="category-icon">🍲</span>
-            <span>火鍋</span>
-        </button>
+                </button>
 
 
-        <!-- 燒肉 -->
 
-        <button
-            class="category"
-            data-category="燒肉"
-        >
-            <span class="category-icon">🥩</span>
-            <span>燒肉</span>
-        </button>
+                <!-- 收藏 -->
 
+                <button
+                    class="category"
+                    data-category="收藏"
+                    type="button"
+                >
 
-        <!-- 咖啡 -->
+                    <span class="category-icon">
+                        ❤️
+                    </span>
 
-        <button
-            class="category"
-            data-category="咖啡"
-        >
-            <span class="category-icon">☕</span>
-            <span>咖啡</span>
-        </button>
+                    <span>
+                        收藏
+                    </span>
+
+                </button>
 
 
-        <!-- 義式 -->
 
-        <button
-            class="category"
-            data-category="義式"
-        >
-            <span class="category-icon">🍝</span>
-            <span>義式</span>
-        </button>
+                <!-- 火鍋 -->
 
+                <button
+                    class="category"
+                    data-category="火鍋"
+                    type="button"
+                >
 
-        <!-- 中式 -->
+                    <span class="category-icon">
+                        🍲
+                    </span>
 
-        <button
-            class="category"
-            data-category="中式"
-        >
-            <span class="category-icon">🥢</span>
-            <span>中式</span>
-        </button>
+                    <span>
+                        火鍋
+                    </span>
+
+                </button>
 
 
-        <!-- 日式 -->
 
-        <button
-            class="category"
-            data-category="日式"
-        >
-            <span class="category-icon">🍣</span>
-            <span>日式</span>
-        </button>
+                <!-- 燒肉 -->
+
+                <button
+                    class="category"
+                    data-category="燒肉"
+                    type="button"
+                >
+
+                    <span class="category-icon">
+                        🥩
+                    </span>
+
+                    <span>
+                        燒肉
+                    </span>
+
+                </button>
 
 
-        <!-- 其他 -->
 
-        <button
-            class="category"
-            data-category="其他"
-        >
-            <span class="category-icon">✨</span>
-            <span>其他</span>
-        </button>
+                <!-- 咖啡 -->
 
-    </div>
+                <button
+                    class="category"
+                    data-category="咖啡"
+                    type="button"
+                >
 
-</section>
+                    <span class="category-icon">
+                        ☕
+                    </span>
+
+                    <span>
+                        咖啡
+                    </span>
+
+                </button>
+
+
+
+                <!-- 義式 -->
+
+                <button
+                    class="category"
+                    data-category="義式"
+                    type="button"
+                >
+
+                    <span class="category-icon">
+                        🍝
+                    </span>
+
+                    <span>
+                        義式
+                    </span>
+
+                </button>
+
+
+
+                <!-- 中式 -->
+
+                <button
+                    class="category"
+                    data-category="中式"
+                    type="button"
+                >
+
+                    <span class="category-icon">
+                        🥢
+                    </span>
+
+                    <span>
+                        中式
+                    </span>
+
+                </button>
+
+
+
+                <!-- 日式 -->
+
+                <button
+                    class="category"
+                    data-category="日式"
+                    type="button"
+                >
+
+                    <span class="category-icon">
+                        🍣
+                    </span>
+
+                    <span>
+                        日式
+                    </span>
+
+                </button>
+
+
+
+                <!-- 其他 -->
+
+                <button
+                    class="category"
+                    data-category="其他"
+                    type="button"
+                >
+
+                    <span class="category-icon">
+                        ✨
+                    </span>
+
+                    <span>
+                        其他
+                    </span>
+
+                </button>
+
+
+            </div>
+
+        </section>
 
 
 
@@ -223,6 +301,7 @@
     <button
         id="addRestaurantButton"
         class="floating-add-button"
+        type="button"
         aria-label="新增餐廳"
     >
 
@@ -246,7 +325,9 @@
         <div class="restaurant-modal">
 
 
-            <!-- Modal Header -->
+            <!-- ==================================================
+                 Modal Header
+            =================================================== -->
 
             <div class="modal-header">
 
@@ -275,7 +356,9 @@
 
 
 
-            <!-- Form -->
+            <!-- ==================================================
+                 Form
+            =================================================== -->
 
             <form
                 id="restaurantForm"
@@ -284,7 +367,7 @@
 
 
                 <!-- ==================================================
-                     Basic Information
+                     01 Basic Information
                 =================================================== -->
 
                 <div class="form-section">
@@ -304,6 +387,7 @@
                         </div>
 
                     </div>
+
 
 
                     <!-- Name -->
@@ -400,7 +484,7 @@
 
 
                 <!-- ==================================================
-                     Restaurant Image
+                     02 Restaurant Image
                 =================================================== -->
 
                 <div class="form-section">
@@ -423,41 +507,73 @@
 
 
                     <p class="form-description">
-    上傳餐廳封面圖片，圖片會儲存到雲端。
-</p>
+                        上傳餐廳封面圖片，圖片會儲存到雲端。
+                    </p>
 
-<div class="image-upload-group">
 
-    <label
-        for="restaurantImage"
-        class="image-upload-button"
-    >
-        📷 選擇餐廳圖片
-    </label>
+                    <div class="image-upload-group">
 
-    <input
-        type="file"
-        id="restaurantImage"
-        accept="image/*"
-        hidden
-    >
 
-    <div
-        id="restaurantImagePreview"
-        class="image-upload-preview"
-    >
-        <span>📷</span>
-        <p>尚未選擇圖片</p>
-    </div>
+                        <!--
+                            注意：
 
-</div>
+                            這個 label 是圖片選擇按鈕。
+                            for="restaurantImage"
+                            會觸發下面的 file input。
+                        -->
+
+                        <label
+                            for="restaurantImage"
+                            class="image-upload-button"
+                        >
+
+                            📷 選擇餐廳圖片
+
+                        </label>
+
+
+                        <!--
+                            真正的檔案輸入。
+
+                            不需要讓使用者直接看到 input。
+                        -->
+
+                        <input
+                            type="file"
+                            id="restaurantImage"
+                            accept="image/*"
+                            hidden
+                        >
+
+
+                        <!--
+                            圖片預覽區域
+                        -->
+
+                        <div
+                            id="restaurantImagePreview"
+                            class="image-upload-preview"
+                        >
+
+                            <span>
+                                📷
+                            </span>
+
+                            <p>
+                                尚未選擇圖片
+                            </p>
+
+                        </div>
+
+
+                    </div>
 
                 </div>
 
 
 
                 <!-- ==================================================
-                     Contact
+                     03 Contact
                 =================================================== -->
 
                 <div class="form-section">
@@ -477,6 +593,7 @@
                         </div>
 
                     </div>
+
 
 
                     <!-- Phone -->
@@ -536,7 +653,7 @@
 
 
                 <!-- ==================================================
-                     Google Maps
+                     04 Google Maps
                 =================================================== -->
 
                 <div class="form-section">
@@ -577,7 +694,7 @@
 
 
                 <!-- ==================================================
-                     Menu Images
+                     05 Menu Images
                 =================================================== -->
 
                 <div class="form-section">
@@ -773,7 +890,7 @@
 
 
                 <!-- ==================================================
-                     Description
+                     06 Description / Notes
                 =================================================== -->
 
                 <div class="form-section">
@@ -839,8 +956,19 @@
          JavaScript
     =================================================== -->
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js"></script>  
+    <!-- Supabase JS v2 -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+    ></script>
+
+
+    <!-- Project JavaScript -->
+
+    <script
+        src="script.js"
+    ></script>
+
 
 </body>
 
