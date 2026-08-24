@@ -860,31 +860,49 @@ async function toggleFavorite(
         );
 
 
+    // ==================================================
+    // 找不到餐廳
+    // ==================================================
+
     if (
         index === -1
     ) {
+
+        console.error(
+            "❌ 找不到要收藏的餐廳：",
+            id
+        );
 
         return;
 
     }
 
 
-    restaurants[index].favorite =
-        !restaurants[index].favorite;
+    const restaurant =
+        restaurants[index];
 
 
-    saveRestaurantsLocal();
+    const newFavorite =
+        !restaurant.favorite;
 
-    renderRestaurants();
 
-
+    // ==================================================
     // Supabase
+    // ==================================================
 
     if (
         supabaseConnected
     ) {
 
+        console.log(
+            "❤️ 更新收藏狀態：",
+            restaurant.name,
+            newFavorite
+        );
+
+
         const {
+            data,
             error
         } =
             await supabaseClient
@@ -892,15 +910,20 @@ async function toggleFavorite(
                 .update({
 
                     favorite:
-                        restaurants[index]
-                            .favorite
+                        newFavorite
 
                 })
                 .eq(
                     "id",
                     id
-                );
+                )
+                .select()
+                .single();
 
+
+        // --------------------------------------------------
+        // Supabase 更新失敗
+        // --------------------------------------------------
 
         if (
             error
@@ -911,15 +934,77 @@ async function toggleFavorite(
                 error
             );
 
-        }
 
-        else {
-
-            console.log(
-                "☁️ 收藏狀態已同步"
+            alert(
+                "❌ 收藏狀態更新失敗，請檢查網路連線。"
             );
 
+
+            return;
+
         }
+
+
+        console.log(
+            "☁️ 收藏狀態已同步：",
+            data
+        );
+
+
+        // --------------------------------------------------
+        // 更新本機資料
+        // --------------------------------------------------
+
+        restaurants[index] = {
+
+            ...restaurants[index],
+
+            favorite:
+                newFavorite
+
+        };
+
+
+        saveRestaurantsLocal();
+
+
+        // --------------------------------------------------
+        // 立即更新畫面
+        // --------------------------------------------------
+
+        renderRestaurants();
+
+
+        // --------------------------------------------------
+        // 再從 Supabase 讀取一次
+        // 確保資料完全一致
+        // --------------------------------------------------
+
+        await loadRestaurants();
+
+        renderRestaurants();
+
+    }
+
+
+    // ==================================================
+    // Local fallback
+    // ==================================================
+
+    else {
+
+        restaurants[index].favorite =
+            newFavorite;
+
+
+        saveRestaurantsLocal();
+
+        renderRestaurants();
+
+
+        console.log(
+            "📱 Supabase 未連線，目前只更新本機收藏狀態。"
+        );
 
     }
 
@@ -993,6 +1078,10 @@ categories.forEach(
             "click",
             () => {
 
+                // ==================================================
+                // 移除其他分類的 active
+                // ==================================================
+
                 categories.forEach(
                     button => {
 
@@ -1004,14 +1093,26 @@ categories.forEach(
                 );
 
 
+                // ==================================================
+                // 當前分類加入 active
+                // ==================================================
+
                 categoryButton.classList.add(
                     "active"
                 );
 
 
+                // ==================================================
+                // 取得分類
+                // ==================================================
+
                 const category =
                     categoryButton.dataset.category;
 
+
+                // ==================================================
+                // 全部
+                // ==================================================
 
                 if (
                     category === "全部"
@@ -1024,7 +1125,36 @@ categories.forEach(
                 }
 
 
-                const filtered =
+                // ==================================================
+                // 收藏
+                // ==================================================
+
+                if (
+                    category === "收藏"
+                ) {
+
+                    const favoriteRestaurants =
+                        restaurants.filter(
+                            restaurant =>
+                                restaurant.favorite === true
+                        );
+
+
+                    renderRestaurants(
+                        favoriteRestaurants
+                    );
+
+
+                    return;
+
+                }
+
+
+                // ==================================================
+                // 一般餐廳分類
+                // ==================================================
+
+                const filteredRestaurants =
                     restaurants.filter(
                         restaurant =>
                             restaurant.category ===
@@ -1033,7 +1163,7 @@ categories.forEach(
 
 
                 renderRestaurants(
-                    filtered
+                    filteredRestaurants
                 );
 
             }
