@@ -1334,27 +1334,40 @@ restaurantForm.addEventListener(
             restaurantForm.dataset.editingId;
 
 
-        // ==================================================
-        // 取得菜單圖片
-        // ==================================================
+// ==================================================
+// 取得菜單圖片
+// ==================================================
 
-        const menuImages = [
+const menuInputs = [
+    document.getElementById("restaurantMenu1"),
+    document.getElementById("restaurantMenu2"),
+    document.getElementById("restaurantMenu3")
+];
 
-            document.getElementById(
-                "restaurantMenu1"
-            ).value.trim(),
+// ==================================================
+// 取得目前使用者選擇的圖片 File
+// ==================================================
 
-            document.getElementById(
-                "restaurantMenu2"
-            ).value.trim(),
+const selectedMenuFiles = menuInputs
+    .map(input => {
 
-            document.getElementById(
-                "restaurantMenu3"
-            ).value.trim()
+        if (
+            !input ||
+            !input.files ||
+            input.files.length === 0
+        ) {
+            return null;
+        }
 
-        ].filter(
-            url => url !== ""
-        );
+        return input.files[0];
+
+    })
+    .filter(file => file !== null);
+
+console.log(
+    "📷 使用者選擇的菜單圖片：",
+    selectedMenuFiles
+);
 
 
         // ==================================================
