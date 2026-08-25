@@ -546,6 +546,29 @@ img {
     box-shadow:
         0 8px 25px rgba(0,0,0,0.18);
 
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+}
+
+
+/* + 號 */
+
+.floating-add-button span {
+
+    display: block;
+
+    font-size: 27px;
+
+    font-weight: 400;
+
+    line-height: 1;
+
+    transform: translateY(-1px);
+
 }
 
 
@@ -3705,4 +3728,226 @@ body.font-extra-large .card-actions button {
 
 .restaurant-image-placeholder[hidden] {
     display: none !important;
+}
+
+/* ==================================================
+   Global Loading
+================================================== */
+
+.app-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 24px;
+
+    background: rgba(0, 0, 0, 0.22);
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    transition:
+        opacity 0.2s ease,
+        visibility 0.2s ease;
+
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+
+
+.app-loading.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+
+.app-loading-card {
+    width: min(260px, calc(100vw - 48px));
+
+    padding: 24px 20px 22px;
+
+    text-align: center;
+
+    background: var(--card-bg, #ffffff);
+
+    border: 1px solid var(--border-color, #e8e8e4);
+
+    border-radius: 24px;
+
+    box-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.12);
+
+    transform: scale(0.94) translateY(6px);
+
+    transition:
+        transform 0.25s ease;
+}
+
+
+.app-loading.is-visible .app-loading-card {
+    transform: scale(1) translateY(0);
+}
+
+
+/* 可愛的小餐盤 */
+
+.app-loading-icon {
+    width: 52px;
+    height: 52px;
+
+    margin: 0 auto 12px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 28px;
+
+    background: var(--surface-color, #f7f7f5);
+
+    border-radius: 50%;
+
+    animation: loading-bounce 1.2s ease-in-out infinite;
+}
+
+
+/* 標題 */
+
+.app-loading-title {
+    margin-bottom: 5px;
+
+    font-size: 16px;
+    font-weight: 700;
+
+    color: var(--text-color, #222222);
+}
+
+
+/* 說明 */
+
+.app-loading-text {
+    font-size: 13px;
+    line-height: 1.5;
+
+    color: var(--muted-text, #888888);
+}
+
+
+/* 三個小圓點 */
+
+.app-loading-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 5px;
+
+    margin-top: 14px;
+}
+
+
+.app-loading-dots span {
+    width: 5px;
+    height: 5px;
+
+    border-radius: 50%;
+
+    background: currentColor;
+
+    color: var(--accent-color, #777777);
+
+    animation: loading-dot 1.2s ease-in-out infinite;
+}
+
+
+.app-loading-dots span:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+
+.app-loading-dots span:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+
+/* ==================================================
+   Loading Animation
+================================================== */
+
+@keyframes loading-bounce {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-5px) rotate(-5deg);
+    }
+
+}
+
+
+@keyframes loading-dot {
+
+    0%,
+    100% {
+        opacity: 0.25;
+        transform: translateY(0);
+    }
+
+    50% {
+        opacity: 1;
+        transform: translateY(-3px);
+    }
+
+}
+
+
+/* ==================================================
+   Dark Mode
+================================================== */
+
+[data-theme="dark"] .app-loading {
+    background: rgba(0, 0, 0, 0.48);
+}
+
+
+[data-theme="dark"] .app-loading-card {
+    background: var(--card-bg, #202020);
+
+    border-color: rgba(255, 255, 255, 0.08);
+
+    box-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.35);
+}
+
+
+[data-theme="dark"] .app-loading-icon {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+
+/* ==================================================
+   Reduce Motion
+================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .app-loading,
+    .app-loading-card {
+        transition: none;
+    }
+
+    .app-loading-icon,
+    .app-loading-dots span {
+        animation: none;
+    }
+
 }

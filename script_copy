@@ -1227,21 +1227,7 @@ article.innerHTML = `
 
     </div>
 
-        <button
-            class="
-                favorite
-                ${restaurant.favorite ? "liked" : ""}
-            "
-            data-id="${restaurant.id}"
-            aria-label="${restaurant.favorite ? "取消收藏" : "收藏"} ${restaurant.name}"
-            aria-pressed="${restaurant.favorite}"
-        >
 
-            ${restaurant.favorite ? "♥" : "♡"}
-
-        </button>
-
-    </div>
 
 
     <div class="restaurant-content">
