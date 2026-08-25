@@ -1323,6 +1323,20 @@ function closeRestaurantModal() {
 // Submit Form
 // ==================================================
 
+function readFileAsDataUrl(file) {
+
+    return new Promise((resolve, reject) => {
+
+        const reader = new FileReader();
+
+        reader.addEventListener("load", () => resolve(reader.result));
+        reader.addEventListener("error", () => reject(reader.error));
+        reader.readAsDataURL(file);
+
+    });
+
+}
+
 restaurantForm.addEventListener(
     "submit",
     async event => {
@@ -1348,21 +1362,11 @@ const menuInputs = [
 // 取得目前使用者選擇的圖片 File
 // ==================================================
 
-const selectedMenuFiles = menuInputs
-    .map(input => {
-
-        if (
-            !input ||
-            !input.files ||
-            input.files.length === 0
-        ) {
-            return null;
-        }
-
-        return input.files[0];
-
-    })
-    .filter(file => file !== null);
+const selectedMenuFiles = menuInputs.map(input =>
+    input && input.files && input.files.length > 0
+        ? input.files[0]
+        : null
+);
 
 console.log(
     "📷 使用者選擇的菜單圖片：",
@@ -1395,6 +1399,18 @@ console.log(
                         )
                 )
                 : null;
+
+        const menuImages = await Promise.all(
+            selectedMenuFiles.map(async (file, index) => {
+
+                if (file) {
+                    return readFileAsDataUrl(file);
+                }
+
+                return existingRestaurant?.menuImages?.[index] || "";
+
+            })
+        );
 
         const restaurantData = {
 
@@ -2576,6 +2592,16 @@ function updateMenuPreview(
     if (
         typeof fileOrUrl === "string"
     ) {
+
+        if (
+            fileOrUrl.startsWith("C:\\fakepath\\") ||
+            fileOrUrl.startsWith("file:///")
+        ) {
+
+            updateMenuPreview(menuNumber, "");
+
+            return;
+        }
 
         preview.innerHTML = `
 
