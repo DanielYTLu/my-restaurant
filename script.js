@@ -1049,7 +1049,107 @@ function renderRestaurants(
 
 }
 
+// ==================================================
+// Normalize Restaurant Image
+// ==================================================
 
+function getRestaurantImageSrc(image) {
+
+    if (!image) {
+        return "";
+    }
+
+    // 確保一定是字串
+    image = String(image).trim();
+
+    if (!image) {
+        return "";
+    }
+
+    // ------------------------------------------
+    // 已經是 Data URL
+    // ------------------------------------------
+
+    if (image.startsWith("data:image/")) {
+        return image;
+    }
+
+    // ------------------------------------------
+    // 一般網路圖片
+    // ------------------------------------------
+
+    if (
+        image.startsWith("http://") ||
+        image.startsWith("https://") ||
+        image.startsWith("blob:")
+    ) {
+        return image;
+    }
+
+    // ------------------------------------------
+    // file:/// 或 fakepath
+    // 這些不能直接拿來顯示
+    // ------------------------------------------
+
+    if (
+        image.startsWith("file:///") ||
+        image.startsWith("C:\\fakepath\\") ||
+        image.startsWith("C:/fakepath/")
+    ) {
+        return "";
+    }
+
+    // ------------------------------------------
+    // 純 Base64
+    // ------------------------------------------
+
+    // JPEG
+    if (
+        image.startsWith("/9j/") ||
+        image.startsWith("/9J/")
+    ) {
+        return `data:image/jpeg;base64,${image}`;
+    }
+
+    // PNG
+    if (
+        image.startsWith("iVBORw0KGgo")
+    ) {
+        return `data:image/png;base64,${image}`;
+    }
+
+    // GIF
+    if (
+        image.startsWith("R0lGOD")
+    ) {
+        return `data:image/gif;base64,${image}`;
+    }
+
+    // WebP
+    if (
+        image.startsWith("UklGR")
+    ) {
+        return `data:image/webp;base64,${image}`;
+    }
+
+    // ------------------------------------------
+    // 如果看起來像 Base64
+    // 最後嘗試 JPEG
+    // ------------------------------------------
+
+    if (
+        image.length > 1000 &&
+        /^[A-Za-z0-9+/=\s]+$/.test(image)
+    ) {
+        return `data:image/jpeg;base64,${image}`;
+    }
+
+    // ------------------------------------------
+    // 其他情況直接使用原值
+    // ------------------------------------------
+
+    return image;
+}
 // ==================================================
 // Restaurant Card
 // ==================================================
@@ -1073,114 +1173,196 @@ function createRestaurantCard(
             ? restaurant.menuImages.filter(Boolean).length
             : 0;
 
+        const restaurantImage =
+    getRestaurantImageSrc(restaurant.image);
 
-    article.innerHTML = `
+console.log(
+    "🖼️ 餐廳圖片處理後：",
+    restaurant.name,
+    restaurantImage
+);
 
-        <div class="restaurant-image">
+article.innerHTML = `
 
-            <img
-                src="${restaurant.image || ""}"
-                alt="${restaurant.name}"
-                onerror="this.hidden=true; this.nextElementSibling.hidden=false"
-            >
+    <div class="restaurant-image">
 
-            <div class="restaurant-image-placeholder" hidden aria-hidden="true">
-                <span>🍽️</span>
-                <small>尚未提供圖片</small>
+        ${
+            restaurantImage
+                ? `
+                    <img
+                        src="${restaurantImage}"
+                        alt="${restaurant.name}"
+                        class="restaurant-card-image"
+                    >
+
+                    <div
+                        class="restaurant-image-placeholder"
+                        hidden
+                    >
+                        <span>🍽️</span>
+                        <small>圖片無法顯示</small>
+                    </div>
+                `
+                : `
+                    <div class="restaurant-image-placeholder">
+                        <span>🍽️</span>
+                        <small>尚未提供圖片</small>
+                    </div>
+                `
+        }
+
+        <button
+            class="
+                favorite
+                ${restaurant.favorite ? "liked" : ""}
+            "
+            data-id="${restaurant.id}"
+            aria-label="${restaurant.favorite ? "取消收藏" : "收藏"} ${restaurant.name}"
+            aria-pressed="${restaurant.favorite}"
+        >
+
+            ${restaurant.favorite ? "♥" : "♡"}
+
+        </button>
+
+    </div>
+
+        <button
+            class="
+                favorite
+                ${restaurant.favorite ? "liked" : ""}
+            "
+            data-id="${restaurant.id}"
+            aria-label="${restaurant.favorite ? "取消收藏" : "收藏"} ${restaurant.name}"
+            aria-pressed="${restaurant.favorite}"
+        >
+
+            ${restaurant.favorite ? "♥" : "♡"}
+
+        </button>
+
+    </div>
+
+
+    <div class="restaurant-content">
+
+        <div class="restaurant-title">
+
+            <div>
+
+                <h2>
+                    ${restaurant.name}
+                </h2>
+
+                <p class="rating">
+                    ★
+                    ${restaurant.rating || "—"}
+                </p>
+
             </div>
+
+            <span class="tag">
+                ${restaurant.category}
+            </span>
+
+        </div>
+
+
+        <p class="location">
+            📍
+            ${restaurant.address || "尚未提供地址"}
+        </p>
+
+
+        <button
+            type="button"
+            class="hours"
+            data-hours-id="${restaurant.id}"
+        >
+            ${getHoursSummary(restaurant)}
+        </button>
+
+
+        <div class="card-actions">
 
             <button
-                class="
-                    favorite
-                    ${restaurant.favorite ? "liked" : ""}
-                "
+                class="menu-button"
                 data-id="${restaurant.id}"
-                aria-label="${restaurant.favorite ? "取消收藏" : "收藏"} ${restaurant.name}"
-                aria-pressed="${restaurant.favorite}"
             >
+                📖 菜單
+                ${
+                    menuCount > 0
+                        ? ` · ${menuCount} 張`
+                        : ""
+                }
+            </button>
 
-                ${restaurant.favorite ? "♥" : "♡"}
 
+            <button
+                class="view-button"
+                data-id="${restaurant.id}"
+            >
+                查看資訊
             </button>
 
         </div>
 
+    </div>
 
-        <div class="restaurant-content">
+`;
 
-            <div class="restaurant-title">
+const testImage =
+    article.querySelector(".restaurant-image img");
 
-                <div>
+if (testImage) {
 
-                    <h2>
-                        ${restaurant.name}
-                    </h2>
+    testImage.addEventListener(
+        "load",
+        () => {
 
-                    <p class="rating">
+            console.log(
+                "✅ IMG 成功載入：",
+                restaurant.name
+            );
 
-                        ★
-                        ${restaurant.rating || "—"}
+            console.log(
+                "自然尺寸：",
+                testImage.naturalWidth,
+                "x",
+                testImage.naturalHeight
+            );
 
-                    </p>
+            console.log(
+                "實際 src：",
+                testImage.currentSrc
+            );
 
-                </div>
+        }
+    );
 
+    testImage.addEventListener(
+        "error",
+        event => {
 
-                <span class="tag">
+            console.error(
+                "❌ IMG 載入失敗：",
+                restaurant.name
+            );
 
-                    ${restaurant.category}
+            console.error(
+                "src：",
+                testImage.src
+            );
 
-                </span>
+            console.error(
+                "currentSrc：",
+                testImage.currentSrc
+            );
 
-            </div>
+        }
+    );
 
-
-            <p class="location">
-
-                📍
-                ${restaurant.address || "尚未提供地址"}
-
-            </p>
-
-
-            <button type="button" class="hours" data-hours-id="${restaurant.id}">
-                ${getHoursSummary(restaurant)}
-            </button>
-
-
-            <div class="card-actions">
-
-                <button
-                    class="menu-button"
-                    data-id="${restaurant.id}"
-                >
-
-                    📖 菜單
-
-                    ${
-                        menuCount > 0
-                            ? ` · ${menuCount} 張`
-                            : ""
-                    }
-
-                </button>
-
-
-                <button
-                    class="view-button"
-                    data-id="${restaurant.id}"
-                >
-
-                    查看資訊
-
-                </button>
-
-            </div>
-
-        </div>
-
-    `;
-
+}
 
     // Favorite
 
@@ -1744,10 +1926,10 @@ function renderWeeklyHoursEditor(value = null) {
     }).join("");
 
     quickDays.innerHTML = weekDays.map(day => `
-        <label>
-            <input type="checkbox" value="${day.key}">
-            ${day.label}
-        </label>
+    <label class="quick-day-item">
+        <input type="checkbox" value="${day.key}">
+        <span>${day.label}</span>
+    </label>
     `).join("");
 
     editor.querySelectorAll(".hours-open-toggle").forEach(button => {
@@ -2239,7 +2421,36 @@ function showRestaurantDetail(
         restaurant.menuImages
             ? restaurant.menuImages.length
             : 0;
+    
+            console.log(
+    "========== 餐廳圖片檢查 =========="
+);
 
+console.log(
+    "餐廳：",
+    restaurant.name
+);
+
+console.log(
+    "image：",
+    restaurant.image
+);
+
+console.log(
+    "image type：",
+    typeof restaurant.image
+);
+
+console.log(
+    "image length：",
+    restaurant.image
+        ? String(restaurant.image).length
+        : 0
+);
+
+console.log(
+    "=================================="
+);
 
     overlay.innerHTML = `
 

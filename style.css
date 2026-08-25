@@ -2182,11 +2182,17 @@ img {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 2px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .hours-day-picker input {
-    margin-right: 3px;
+    margin: 0;
+    flex: 0 0 auto;
 }
 
 .hours-quick-times {
@@ -3024,4 +3030,679 @@ body.font-extra-large .card-actions button {
 @keyframes empty-state-in {
     from { opacity: 0; transform: translateY(7px) scale(0.98); }
     to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.hours-day-picker input[type="checkbox"] {
+    width: auto;
+    min-width: 0;
+    height: auto;
+    margin: 0;
+    flex: 0 0 auto;
+}
+
+/* ==================================================
+   Dark Mode - Complete UI Fix
+   請放在 CSS 最底部
+================================================== */
+
+[data-theme="dark"] {
+
+    --dark-bg: #171716;
+    --dark-surface: #222220;
+    --dark-card: #292927;
+    --dark-elevated: #30302d;
+    --dark-text: #f2f2ed;
+    --dark-secondary: #c4c4bc;
+    --dark-muted: #999990;
+    --dark-border: #3d3d39;
+
+}
+
+
+/* =========================
+   基本背景
+========================= */
+
+[data-theme="dark"] body {
+    background: var(--dark-bg);
+    color: var(--dark-text);
+}
+
+
+/* =========================
+   Header
+========================= */
+
+[data-theme="dark"] .app-header {
+    background: rgba(23, 23, 22, 0.96);
+    border-bottom-color: var(--dark-border);
+}
+
+[data-theme="dark"] .eyebrow {
+    color: var(--dark-muted);
+}
+
+[data-theme="dark"] .header-inner h1 {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .display-settings-button {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+
+/* =========================
+   搜尋
+========================= */
+
+[data-theme="dark"] .search-box {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .search-icon {
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .search-box input {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .search-box input::placeholder {
+    color: var(--dark-muted);
+}
+
+[data-theme="dark"] .clear-search-button {
+    background: var(--dark-elevated);
+    color: var(--dark-secondary);
+}
+
+
+/* =========================
+   分類按鈕
+========================= */
+
+[data-theme="dark"] .category {
+    background: transparent;
+    border-color: var(--dark-border);
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .category.active {
+    background: #f2f2ed;
+    border-color: #f2f2ed;
+    color: #202020;
+}
+
+
+/* =========================
+   餐廳卡片
+========================= */
+
+[data-theme="dark"] .restaurant-card {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .restaurant-title h2 {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .location,
+[data-theme="dark"] .hours {
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .rating {
+    color: #d8b65c;
+}
+
+[data-theme="dark"] .tag {
+    background: var(--dark-elevated);
+    color: var(--dark-secondary);
+}
+
+
+/* =========================
+   卡片按鈕
+========================= */
+
+[data-theme="dark"] .card-actions button {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .menu-button {
+    background: #f2f2ed;
+    color: #202020;
+}
+
+[data-theme="dark"] .view-button {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+    color: var(--dark-secondary);
+}
+
+
+/* =========================
+   收藏按鈕
+========================= */
+
+[data-theme="dark"] .favorite {
+    background: rgba(48, 48, 45, 0.94);
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .favorite.liked {
+    color: #ef7777;
+}
+
+
+/* =========================
+   Floating Add Button
+========================= */
+
+[data-theme="dark"] .floating-add-button {
+    background: #f2f2ed;
+    color: #202020;
+}
+
+
+/* ==================================================
+   編輯餐廳 Modal
+================================================== */
+
+[data-theme="dark"] .restaurant-modal {
+    background: var(--dark-bg);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .modal-header {
+    background: rgba(23, 23, 22, 0.96);
+    border-bottom-color: var(--dark-border);
+}
+
+[data-theme="dark"] .modal-header h2 {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .modal-close {
+    background: var(--dark-elevated);
+    color: var(--dark-secondary);
+}
+
+
+/* =========================
+   表單
+========================= */
+
+[data-theme="dark"] .form-section {
+    border-bottom-color: var(--dark-border);
+}
+
+[data-theme="dark"] .form-section-title h3 {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .form-section-number,
+[data-theme="dark"] .form-section-hint {
+    color: var(--dark-muted);
+}
+
+[data-theme="dark"] .form-description {
+    color: var(--dark-muted);
+}
+
+[data-theme="dark"] .form-field > span {
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .form-field input,
+[data-theme="dark"] .form-field select,
+[data-theme="dark"] .form-field textarea,
+[data-theme="dark"] .menu-form-item input {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .form-field input::placeholder,
+[data-theme="dark"] .form-field textarea::placeholder,
+[data-theme="dark"] .menu-form-item input::placeholder {
+    color: var(--dark-muted);
+}
+
+[data-theme="dark"] .form-field input:focus,
+[data-theme="dark"] .form-field select:focus,
+[data-theme="dark"] .form-field textarea:focus,
+[data-theme="dark"] .menu-form-item input:focus {
+    border-color: #777770;
+}
+
+
+/* =========================
+   菜單
+========================= */
+
+[data-theme="dark"] .menu-form-label > span {
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .menu-remove-button {
+    color: var(--dark-muted);
+}
+
+[data-theme="dark"] .menu-remove-button:hover {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .menu-preview {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .menu-preview-empty {
+    color: var(--dark-muted);
+}
+
+[data-theme="dark"] .menu-preview-error-title {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .menu-preview-error-text {
+    color: var(--dark-muted);
+}
+
+
+/* ==================================================
+   營業時間編輯器
+================================================== */
+
+/* 「營業時間」標題 */
+[data-theme="dark"] .hours-editor > span {
+    color: var(--dark-secondary);
+}
+
+
+/* 每一個星期 */
+[data-theme="dark"] .hours-day-row {
+    border-bottom-color: var(--dark-border);
+}
+
+
+/* 星期一、星期二文字 */
+[data-theme="dark"] .hours-day-name {
+    color: var(--dark-text);
+}
+
+
+/* 開啟 / 未營業按鈕 */
+[data-theme="dark"] .hours-open-toggle {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .hours-open-toggle.is-open {
+    background: rgba(45, 90, 52, 0.25);
+    border-color: #5d9363;
+    color: #91d197;
+}
+
+
+/* 時間輸入框 */
+[data-theme="dark"] .hours-time-fields input,
+[data-theme="dark"] .hours-quick-times input {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+
+/* 時間輸入框 placeholder */
+[data-theme="dark"] .hours-time-fields input::placeholder,
+[data-theme="dark"] .hours-quick-times input::placeholder {
+    color: var(--dark-muted);
+}
+
+
+/* 快速套用區塊 */
+[data-theme="dark"] .hours-quick-apply {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+
+/* 「快速套用相同營業時間」 */
+[data-theme="dark"] .hours-quick-apply strong {
+    color: var(--dark-secondary);
+}
+
+
+/* 星期一～星期日選擇按鈕 */
+[data-theme="dark"] .hours-day-picker label {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+    color: var(--dark-secondary);
+}
+
+
+/* checkbox */
+[data-theme="dark"] .hours-day-picker input[type="checkbox"] {
+    accent-color: #f2f2ed;
+}
+
+
+/* 套用按鈕 */
+[data-theme="dark"] #applyQuickHours {
+    background: #f2f2ed;
+    color: #202020;
+}
+
+
+/* ==================================================
+   設定面板
+================================================== */
+
+[data-theme="dark"] .display-settings-sheet {
+    background: var(--dark-bg);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .display-setting-section h3 {
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .settings-segmented button,
+[data-theme="dark"] .settings-finish-button {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .settings-segmented button.active {
+    background: #f2f2ed;
+    border-color: #f2f2ed;
+    color: #202020;
+}
+
+[data-theme="dark"] .settings-row-button {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+
+/* 設定面板拖曳提示 */
+[data-theme="dark"] .display-settings-sheet::before {
+    background: #555550;
+}
+
+
+/* ==================================================
+   排序列表
+================================================== */
+
+[data-theme="dark"] .order-item {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .order-drag-handle {
+    color: var(--dark-muted);
+}
+
+[data-theme="dark"] .order-item-name {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .order-move-button {
+    background: var(--dark-elevated);
+    border-color: var(--dark-border);
+    color: var(--dark-secondary);
+}
+
+
+/* ==================================================
+   詳細資料
+================================================== */
+
+[data-theme="dark"] .detail-sheet {
+    background: var(--dark-bg);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .detail-header {
+    background: rgba(23, 23, 22, 0.94);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .detail-close {
+    background: var(--dark-elevated);
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .detail-title-row h2 {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .detail-rating {
+    color: #d8b65c;
+}
+
+[data-theme="dark"] .detail-menu-button {
+    background: #f2f2ed;
+    color: #202020;
+}
+
+[data-theme="dark"] .detail-menu-button span {
+    color: #666660;
+}
+
+
+/* =========================
+   詳細資料中的地址、電話等
+========================= */
+
+[data-theme="dark"] .info-item > span {
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .info-item small {
+    color: var(--dark-muted);
+}
+
+[data-theme="dark"] .info-item p {
+    color: var(--dark-secondary);
+}
+
+
+/* =========================
+   描述
+========================= */
+
+[data-theme="dark"] .description {
+    border-top-color: var(--dark-border);
+}
+
+[data-theme="dark"] .description h3 {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .description p {
+    color: var(--dark-secondary);
+}
+
+
+/* =========================
+   詳細頁按鈕
+========================= */
+
+[data-theme="dark"] .detail-map-button {
+    background: #f2f2ed;
+    color: #202020;
+}
+
+[data-theme="dark"] .detail-edit-button {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .detail-delete-button {
+    background: rgba(100, 40, 40, 0.22);
+    border-color: #654040;
+    color: #e58a8a;
+}
+
+
+/* ==================================================
+   空白狀態
+================================================== */
+
+[data-theme="dark"] .empty-state {
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .empty-state h2,
+[data-theme="dark"] .empty-state p {
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .empty-icon {
+    color: var(--dark-muted);
+}
+
+[data-theme="dark"] .empty-state-button {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+    color: var(--dark-secondary);
+}
+
+
+/* ==================================================
+   圖片 Placeholder
+================================================== */
+
+[data-theme="dark"] .restaurant-image {
+    background: #353531;
+}
+
+[data-theme="dark"] .restaurant-image-placeholder {
+    background: #353531;
+    color: var(--dark-muted);
+}
+
+
+/* ==================================================
+   Toast
+================================================== */
+
+[data-theme="dark"] .toast {
+    background: #f2f2ed;
+    color: #202020;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+
+/* ==================================================
+   字體大小設定
+   確保 dark mode 不會把文字顏色蓋回去
+================================================== */
+
+[data-theme="dark"] .restaurant-title h2 {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .location,
+[data-theme="dark"] .hours {
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .card-actions button {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .view-button {
+    color: var(--dark-secondary);
+}
+
+/* ==================================================
+   Dark Mode - 首頁菜單按鈕文字
+================================================== */
+
+[data-theme="dark"] .card-actions .menu-button,
+[data-theme="dark"] .card-actions .menu-button *,
+[data-theme="dark"] .restaurant-card .menu-button {
+    background: #f2f2ed;
+    color: #202020;
+}
+
+/* ==================================================
+   修正首頁卡片模式餐廳圖片
+================================================== */
+
+.restaurant-list:not(.list-view) .restaurant-card {
+    display: block;
+}
+
+.restaurant-list:not(.list-view) .restaurant-image {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    min-height: 220px;
+    overflow: hidden;
+    background: #ecece8;
+}
+
+.restaurant-list:not(.list-view) .restaurant-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+    object-position: center;
+}
+
+/* 手機 */
+@media (max-width: 600px) {
+    .restaurant-list:not(.list-view) .restaurant-image {
+        height: 210px;
+        min-height: 210px;
+    }
+}
+
+.restaurant-card-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.restaurant-image {
+    position: relative;
+    overflow: hidden;
+}
+
+.restaurant-image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.restaurant-image-placeholder span {
+    font-size: 32px;
+}
+
+.restaurant-image-placeholder small {
+    font-size: 13px;
+}
+
+.restaurant-image-placeholder[hidden] {
+    display: none !important;
 }
