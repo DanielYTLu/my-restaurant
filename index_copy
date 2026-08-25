@@ -48,6 +48,16 @@
 
             </div>
 
+            <button
+                id="displaySettingsButton"
+                class="display-settings-button"
+                type="button"
+                aria-label="顯示與排序"
+                title="顯示與排序"
+            >
+                ⚙️
+            </button>
+
         </div>
 
     </header>
@@ -293,6 +303,68 @@
     </main>
 
 
+    <div id="displaySettingsModal" class="modal-overlay">
+
+        <div class="display-settings-sheet">
+
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">DISPLAY</p>
+                    <h2>顯示與排序</h2>
+                </div>
+                <button id="closeDisplaySettings" class="modal-close" type="button">×</button>
+            </div>
+
+            <div class="display-settings-content">
+
+                <section class="display-setting-section">
+                    <h3>文字大小</h3>
+                    <div class="settings-segmented" id="fontSizeOptions">
+                        <button type="button" data-font-size="small">A−</button>
+                        <button type="button" data-font-size="medium">標準</button>
+                        <button type="button" data-font-size="large">A＋</button>
+                    </div>
+                </section>
+
+                <section class="display-setting-section">
+                    <h3>瀏覽方式</h3>
+                    <div class="settings-segmented" id="viewModeOptions">
+                        <button type="button" data-view-mode="card">▦ 卡片</button>
+                        <button type="button" data-view-mode="list">☰ 列表</button>
+                    </div>
+                </section>
+
+                <button id="editOrderButton" class="settings-row-button" type="button">
+                    <span>↕️ 編輯卡片順序</span>
+                    <span>›</span>
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div id="orderSettingsModal" class="modal-overlay">
+
+        <div class="display-settings-sheet order-sheet">
+
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">ORDER</p>
+                    <h2>編輯卡片順序</h2>
+                </div>
+                <button id="finishOrderButton" class="settings-finish-button" type="button">完成</button>
+            </div>
+
+            <div id="orderList" class="order-list"></div>
+
+        </div>
+
+    </div>
+
+
 
     <!-- ==================================================
          Add Restaurant Button
@@ -478,6 +550,39 @@
                         >
 
                     </label>
+                    <!-- Restaurant Image -->
+                    <div class="menu-form-item restaurant-image-form-item">
+                        <div class="menu-form-label">
+                            <span>
+                                餐廳圖片
+                            </span>
+                            <button
+                                type="button"
+                                class="menu-remove-button"
+                                id="restaurantImageRemove"
+                            >
+                                移除
+                            </button>
+                        </div>
+                        <div
+                            class="menu-preview"
+                            id="restaurantImagePreview"
+                        >
+                            <div class="menu-preview-empty">
+                                <span class="menu-upload-icon">
+                                    🏪
+                                </span>
+                                <p>
+                                    點擊上傳餐廳圖片
+                                </p>
+                            </div>
+                        </div>
+                        <input
+                            type="file"
+                            id="restaurantImage"
+                            accept="image/*"
+                        >
+                    </div>
 
                 </div>
 
@@ -545,19 +650,37 @@
 
                     <!-- Hours -->
 
-                    <label class="form-field">
+                    <div class="form-field hours-editor">
 
                         <span>
                             營業時間
                         </span>
 
-                        <input
-                            type="text"
-                            id="restaurantHours"
-                            placeholder="例如：11:30 - 21:30"
-                        >
+                        <div id="weeklyHoursEditor"></div>
 
-                    </label>
+                        <div class="hours-quick-apply">
+
+                            <strong>
+                                快速套用相同營業時間
+                            </strong>
+
+                            <div class="hours-day-picker" id="quickHoursDays"></div>
+
+                            <div class="hours-quick-times">
+
+                                <input type="time" id="quickHoursStart" value="11:00">
+                                <span>～</span>
+                                <input type="time" id="quickHoursEnd" value="20:00">
+
+                            </div>
+
+                            <button type="button" id="applyQuickHours">
+                                套用到選取日期
+                            </button>
+
+                        </div>
+
+                    </div>
 
                 </div>
 

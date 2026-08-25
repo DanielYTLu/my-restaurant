@@ -96,6 +96,25 @@ img {
     padding:
         22px 20px 18px;
 
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+}
+
+.display-settings-button {
+    width: 42px;
+    height: 42px;
+    border: 1px solid #e1e1dc;
+    border-radius: 50%;
+    background: white;
+    font-size: 19px;
+}
+
+.display-settings-button:active {
+    transform: scale(0.96);
 }
 
 
@@ -2074,4 +2093,300 @@ img {
 
     }
 
+}
+
+.hours-editor > span {
+    display: block;
+    margin-bottom: 7px;
+    color: #555;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.hours-day-row {
+    display: grid;
+    grid-template-columns: 42px 78px 1fr;
+    gap: 8px;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.hours-day-name {
+    color: #333;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.hours-open-toggle,
+.hours-day-picker label {
+    min-height: 40px;
+    border: 1px solid #deded9;
+    border-radius: 10px;
+    background: white;
+    color: #555;
+    font-size: 12px;
+}
+
+.hours-open-toggle {
+    padding: 0 8px;
+}
+
+.hours-open-toggle.is-open {
+    border-color: #9abf9c;
+    color: #287333;
+}
+
+.hours-time-fields {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.hours-time-fields input,
+.hours-quick-times input {
+    min-width: 0;
+    min-height: 40px;
+    padding: 8px;
+    border: 1px solid #deded9;
+    border-radius: 10px;
+    background: white;
+    font-size: 13px;
+}
+
+.hours-time-fields input {
+    width: 100%;
+}
+
+.hours-quick-apply {
+    margin-top: 15px;
+    padding: 13px;
+    border: 1px solid #e3e3de;
+    border-radius: 12px;
+    background: #f7f7f4;
+}
+
+.hours-quick-apply strong {
+    display: block;
+    margin-bottom: 10px;
+    color: #555;
+    font-size: 12px;
+}
+
+.hours-day-picker {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.hours-day-picker label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.hours-day-picker input {
+    margin-right: 3px;
+}
+
+.hours-quick-times {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 10px 0;
+}
+
+.hours-quick-times input {
+    flex: 1;
+}
+
+#applyQuickHours {
+    width: 100%;
+    min-height: 42px;
+    border: 0;
+    border-radius: 10px;
+    background: #333;
+    color: white;
+    font-size: 13px;
+}
+
+@media (min-width: 600px) {
+    .hours-day-row {
+        grid-template-columns: 58px 92px 1fr;
+    }
+}
+
+.hours {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+
+.hours:hover {
+    color: #333;
+}
+
+.restaurant-list.list-view .restaurant-card {
+    display: grid;
+    grid-template-columns: 112px 1fr;
+}
+
+.restaurant-list.list-view .restaurant-image {
+    height: 100%;
+    min-height: 132px;
+}
+
+.restaurant-list.list-view .restaurant-content {
+    padding: 13px;
+}
+
+.restaurant-list.list-view .restaurant-title h2 {
+    font-size: 16px;
+}
+
+.restaurant-list.list-view .card-actions {
+    margin-top: 8px;
+}
+
+.font-small .restaurant-title h2 {
+    font-size: 17px;
+}
+
+.font-small .location,
+.font-small .hours,
+.font-small .rating,
+.font-small .card-actions button {
+    font-size: 11px;
+}
+
+.font-large .restaurant-title h2 {
+    font-size: 21px;
+}
+
+.font-large .location,
+.font-large .hours,
+.font-large .rating,
+.font-large .card-actions button {
+    font-size: 14px;
+}
+
+.display-settings-sheet {
+    width: 100%;
+    max-width: 760px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #f8f8f6;
+    border-radius: 22px 22px 0 0;
+}
+
+.display-settings-content {
+    padding: 20px;
+}
+
+.display-setting-section {
+    margin-bottom: 22px;
+}
+
+.display-setting-section h3 {
+    margin-bottom: 9px;
+    color: #555;
+    font-size: 13px;
+}
+
+.settings-segmented {
+    display: flex;
+    gap: 8px;
+}
+
+.settings-segmented button,
+.settings-finish-button {
+    min-height: 42px;
+    padding: 0 14px;
+    border: 1px solid #deded9;
+    border-radius: 11px;
+    background: white;
+    color: #555;
+    font-size: 13px;
+}
+
+.settings-segmented button {
+    flex: 1;
+}
+
+.settings-segmented button.active {
+    border-color: #202020;
+    background: #202020;
+    color: white;
+}
+
+.settings-row-button {
+    display: flex;
+    width: 100%;
+    min-height: 52px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    border: 1px solid #e1e1dc;
+    border-radius: 12px;
+    background: white;
+    color: #333;
+    font-size: 13px;
+}
+
+.order-list {
+    padding: 14px 20px 24px;
+}
+
+.order-item {
+    display: grid;
+    grid-template-columns: 30px 1fr 40px 40px;
+    gap: 7px;
+    min-height: 52px;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    border: 1px solid #e1e1dc;
+    border-radius: 12px;
+    background: white;
+    touch-action: none;
+}
+
+.order-drag-handle {
+    color: #888;
+    font-size: 19px;
+    text-align: center;
+}
+
+.order-item-name {
+    overflow: hidden;
+    color: #333;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.order-move-button {
+    min-height: 38px;
+    border: 1px solid #deded9;
+    border-radius: 9px;
+    background: #f8f8f6;
+}
+
+.order-move-button:disabled {
+    opacity: 0.35;
+}
+
+.order-item.is-dragging {
+    opacity: 0.45;
+}
+
+@media (min-width: 768px) {
+    .display-settings-sheet {
+        border-radius: 22px;
+    }
 }

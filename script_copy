@@ -33,6 +33,51 @@ let restaurants = [];
 
 let supabaseConnected = false;
 
+const favoriteSyncVersions = new Map();
+
+const displaySettings = loadDisplaySettings();
+
+function loadDisplaySettings() {
+    try {
+        const saved = JSON.parse(localStorage.getItem("displaySettings"));
+
+        return {
+            fontSize: ["small", "medium", "large"].includes(saved?.fontSize)
+                ? saved.fontSize
+                : "medium",
+            viewMode: saved?.viewMode === "list" ? "list" : "card",
+            customOrder: Array.isArray(saved?.customOrder)
+                ? saved.customOrder.map(String)
+                : []
+        };
+    }
+    catch {
+        return { fontSize: "medium", viewMode: "card", customOrder: [] };
+    }
+}
+
+function saveDisplaySettings() {
+    localStorage.setItem("displaySettings", JSON.stringify(displaySettings));
+}
+
+function getOrderedRestaurants(source = restaurants) {
+    const available = new Map(source.map(restaurant => [String(restaurant.id), restaurant]));
+    const ordered = displaySettings.customOrder
+        .map(id => available.get(String(id)))
+        .filter(Boolean);
+    const orderedIds = new Set(ordered.map(restaurant => String(restaurant.id)));
+
+    return ordered.concat(
+        source.filter(restaurant => !orderedIds.has(String(restaurant.id)))
+    );
+}
+
+function applyDisplaySettings() {
+    document.body.classList.remove("font-small", "font-medium", "font-large");
+    document.body.classList.add(`font-${displaySettings.fontSize}`);
+    restaurantList.classList.toggle("list-view", displaySettings.viewMode === "list");
+}
+
 
 // ==================================================
 // DOM
@@ -72,6 +117,113 @@ const restaurantForm =
     document.getElementById(
         "restaurantForm"
     );
+
+const displaySettingsButton =
+    document.getElementById("displaySettingsButton");
+
+const displaySettingsModal =
+    document.getElementById("displaySettingsModal");
+
+const orderSettingsModal =
+    document.getElementById("orderSettingsModal");
+const restaurantImageInput =
+    document.getElementById(
+        "restaurantImage"
+    );
+const restaurantImagePreview =
+    document.getElementById(
+        "restaurantImagePreview"
+    );
+
+const weekDays = [
+    { key: "monday", label: "一" },
+    { key: "tuesday", label: "二" },
+    { key: "wednesday", label: "三" },
+    { key: "thursday", label: "四" },
+    { key: "friday", label: "五" },
+    { key: "saturday", label: "六" },
+    { key: "sunday", label: "日" }
+];
+
+function createEmptyWeeklyHours() {
+    return Object.fromEntries(
+        weekDays.map(day => [
+            day.key,
+            { open: false, start: "", end: "" }
+        ])
+    );
+}
+
+function normalizeWeeklyHours(value) {
+    let parsed = value;
+
+    if (typeof parsed === "string") {
+        try {
+            parsed = JSON.parse(parsed);
+        }
+        catch {
+            parsed = null;
+        }
+    }
+
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const weeklyHours = createEmptyWeeklyHours();
+
+        weekDays.forEach(day => {
+            const entry = parsed[day.key];
+
+            if (entry && typeof entry === "object") {
+                weeklyHours[day.key] = {
+                    open: entry.open === true,
+                    start: entry.start || "",
+                    end: entry.end || ""
+                };
+            }
+        });
+
+        return weeklyHours;
+    }
+
+    const legacyMatch = String(value || "").match(/(\d{1,2}:\d{2})\s*[-~]\s*(\d{1,2}:\d{2})/);
+
+    if (legacyMatch) {
+        return Object.fromEntries(
+            weekDays.map(day => [
+                day.key,
+                { open: true, start: legacyMatch[1], end: legacyMatch[2] }
+            ])
+        );
+    }
+
+    return createEmptyWeeklyHours();
+}
+
+function formatHoursRange(hours) {
+    return hours.open && hours.start && hours.end
+        ? `${hours.start}–${hours.end}`
+        : "公休";
+}
+
+function getTodayHours(restaurant) {
+    const dayKey = weekDays[(new Date().getDay() + 6) % 7].key;
+    return normalizeWeeklyHours(restaurant.hours)[dayKey];
+}
+
+function getHoursSummary(restaurant) {
+    const todayHours = getTodayHours(restaurant);
+
+    return todayHours.open && todayHours.start && todayHours.end
+        ? `🟢 今日營業 ${todayHours.start}–${todayHours.end}`
+        : "🔴 今日公休";
+}
+
+function getWeeklyHoursText(restaurant) {
+    const weeklyHours = normalizeWeeklyHours(restaurant.hours);
+
+    return weekDays.map(day =>
+        `星期${day.label}　${formatHoursRange(weeklyHours[day.key])}`
+    ).join("\n");
+}
 
 
 // ==================================================
@@ -353,7 +505,7 @@ function mapSupabaseToRestaurant(
         // ==================================================
 
         hours:
-            row.opening_hours || "",
+            normalizeWeeklyHours(row.opening_hours),
 
 
         // ==================================================
@@ -452,7 +604,9 @@ function mapRestaurantToSupabase(
         // ==================================================
 
         opening_hours:
-            restaurant.hours || null,
+            JSON.stringify(
+                normalizeWeeklyHours(restaurant.hours)
+            ),
 
 
         // ==================================================
@@ -523,6 +677,18 @@ function saveRestaurantsLocal() {
         "restaurants",
         JSON.stringify(restaurants)
     );
+
+}
+
+function cleanDisplayOrder() {
+    const existingIds = new Set(
+        restaurants.map(restaurant => String(restaurant.id))
+    );
+
+    displaySettings.customOrder = displaySettings.customOrder.filter(
+        id => existingIds.has(String(id))
+    );
+    saveDisplaySettings();
 
 }
 
@@ -755,10 +921,13 @@ function renderRestaurants(
 ) {
 
     restaurantList.innerHTML = "";
+    applyDisplaySettings();
+
+    const visibleRestaurants = getOrderedRestaurants(restaurantData);
 
 
     if (
-        restaurantData.length === 0
+        visibleRestaurants.length === 0
     ) {
 
         restaurantList.innerHTML = `
@@ -786,7 +955,7 @@ function renderRestaurants(
     }
 
 
-    restaurantData.forEach(
+    visibleRestaurants.forEach(
         restaurant => {
 
             restaurantList.appendChild(
@@ -886,12 +1055,9 @@ function createRestaurantCard(
             </p>
 
 
-            <p class="hours">
-
-                🕐
-                ${restaurant.hours || "尚未提供營業時間"}
-
-            </p>
+            <button type="button" class="hours" data-hours-id="${restaurant.id}">
+                ${getHoursSummary(restaurant)}
+            </button>
 
 
             <div class="card-actions">
@@ -934,7 +1100,10 @@ function createRestaurantCard(
         .querySelector(".favorite")
         .addEventListener(
             "click",
-            () => {
+            event => {
+
+                event.preventDefault();
+                event.stopPropagation();
 
                 toggleFavorite(
                     restaurant.id
@@ -957,6 +1126,13 @@ function createRestaurantCard(
                 );
 
             }
+        );
+
+    article
+        .querySelector(".hours")
+        .addEventListener(
+            "click",
+            () => alert(`營業時間\n\n${getWeeklyHoursText(restaurant)}`)
         );
 
 
@@ -1001,8 +1177,22 @@ async function toggleFavorite(id) {
     // 1. 立即更新畫面
     // ==================================================
 
+    const previousFavorite =
+        restaurants[index].favorite === true;
+
+    const newFavorite =
+        !previousFavorite;
+
     restaurants[index].favorite =
-        !restaurants[index].favorite;
+        newFavorite;
+
+    const syncVersion =
+        (favoriteSyncVersions.get(String(id)) || 0) + 1;
+
+    favoriteSyncVersions.set(
+        String(id),
+        syncVersion
+    );
 
 
     // 先儲存本機
@@ -1019,9 +1209,6 @@ async function toggleFavorite(id) {
 
     if (supabaseConnected) {
 
-        const newFavorite =
-            restaurants[index].favorite;
-
 
         const {
             error
@@ -1037,6 +1224,18 @@ async function toggleFavorite(id) {
 
 
         if (error) {
+
+            if (
+                favoriteSyncVersions.get(String(id)) === syncVersion
+            ) {
+
+                restaurants[index].favorite =
+                    previousFavorite;
+
+                saveRestaurantsLocal();
+                renderRestaurants();
+
+            }
 
             console.error(
                 "❌ 收藏同步失敗：",
@@ -1233,6 +1432,9 @@ addRestaurantButton.addEventListener(
 
 
         restaurantForm.reset();
+        restaurantImageInput.dataset.imageRemoved = "false";
+        updateRestaurantImagePreview("");
+        renderWeeklyHoursEditor();
 
         document.querySelectorAll("[id^='restaurantMenu']").forEach(input => {
             input.dataset.menuRemoved = "false";
@@ -1298,6 +1500,9 @@ function closeRestaurantModal() {
 
 
     restaurantForm.reset();
+    restaurantImageInput.dataset.imageRemoved = "false";
+    updateRestaurantImagePreview("");
+    renderWeeklyHoursEditor();
 
     document.querySelectorAll("[id^='restaurantMenu']").forEach(input => {
         input.dataset.menuRemoved = "false";
@@ -1335,14 +1540,124 @@ function readFileAsDataUrl(file) {
 
     return new Promise((resolve, reject) => {
 
-        const reader = new FileReader();
+        const image = new Image();
+        const imageUrl = URL.createObjectURL(file);
 
-        reader.addEventListener("load", () => resolve(reader.result));
-        reader.addEventListener("error", () => reject(reader.error));
-        reader.readAsDataURL(file);
+        image.addEventListener("load", () => {
+
+            const maxSize = 1600;
+            const ratio = Math.min(
+                1,
+                maxSize / Math.max(image.naturalWidth, image.naturalHeight)
+            );
+            const canvas = document.createElement("canvas");
+
+            canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+            canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+            canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+
+            URL.revokeObjectURL(imageUrl);
+            resolve(canvas.toDataURL("image/jpeg", 0.82));
+
+        });
+
+        image.addEventListener("error", () => {
+            URL.revokeObjectURL(imageUrl);
+            reject(new Error("圖片無法讀取"));
+        });
+
+        image.src = imageUrl;
 
     });
 
+}
+
+function renderWeeklyHoursEditor(value = null) {
+    const editor = document.getElementById("weeklyHoursEditor");
+    const quickDays = document.getElementById("quickHoursDays");
+    const weeklyHours = normalizeWeeklyHours(value);
+
+    editor.innerHTML = weekDays.map(day => {
+        const hours = weeklyHours[day.key];
+
+        return `
+            <div class="hours-day-row" data-day="${day.key}">
+                <span class="hours-day-name">星期${day.label}</span>
+                <button type="button" class="hours-open-toggle ${hours.open ? "is-open" : ""}" data-open="${hours.open}">
+                    ${hours.open ? "🟢 營業" : "⚪ 公休"}
+                </button>
+                <div class="hours-time-fields" ${hours.open ? "" : "hidden"}>
+                    <input type="time" class="hours-start" value="${hours.start}">
+                    <span>～</span>
+                    <input type="time" class="hours-end" value="${hours.end}">
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    quickDays.innerHTML = weekDays.map(day => `
+        <label>
+            <input type="checkbox" value="${day.key}">
+            ${day.label}
+        </label>
+    `).join("");
+
+    editor.querySelectorAll(".hours-open-toggle").forEach(button => {
+        button.addEventListener("click", () => {
+            const isOpen = button.dataset.open !== "true";
+            const timeFields = button.parentElement.querySelector(".hours-time-fields");
+
+            button.dataset.open = String(isOpen);
+            button.classList.toggle("is-open", isOpen);
+            button.textContent = isOpen ? "🟢 營業" : "⚪ 公休";
+            timeFields.hidden = !isOpen;
+        });
+    });
+}
+
+function readWeeklyHoursFromEditor() {
+    const weeklyHours = createEmptyWeeklyHours();
+
+    document.querySelectorAll(".hours-day-row").forEach(row => {
+        const open = row.querySelector(".hours-open-toggle").dataset.open === "true";
+        const start = row.querySelector(".hours-start").value;
+        const end = row.querySelector(".hours-end").value;
+
+        if (open && (!start || !end || start >= end)) {
+            throw new Error(`星期${row.querySelector(".hours-day-name").textContent.replace("星期", "")}的營業時間不完整或有誤`);
+        }
+
+        weeklyHours[row.dataset.day] = { open, start: open ? start : "", end: open ? end : "" };
+    });
+
+    return weeklyHours;
+}
+
+function initializeWeeklyHours() {
+    document.getElementById("applyQuickHours").addEventListener("click", () => {
+        const selectedDays = [...document.querySelectorAll("#quickHoursDays input:checked")].map(input => input.value);
+        const start = document.getElementById("quickHoursStart").value;
+        const end = document.getElementById("quickHoursEnd").value;
+
+        if (selectedDays.length === 0 || !start || !end || start >= end) {
+            alert("請選擇日期並設定正確的開始與結束時間。");
+            return;
+        }
+
+        selectedDays.forEach(dayKey => {
+            const row = document.querySelector(`[data-day="${dayKey}"]`);
+            const toggle = row.querySelector(".hours-open-toggle");
+
+            toggle.dataset.open = "true";
+            toggle.classList.add("is-open");
+            toggle.textContent = "🟢 營業";
+            row.querySelector(".hours-time-fields").hidden = false;
+            row.querySelector(".hours-start").value = start;
+            row.querySelector(".hours-end").value = end;
+        });
+    });
+
+    renderWeeklyHoursEditor();
 }
 
 restaurantForm.addEventListener(
@@ -1424,6 +1739,24 @@ console.log(
             })
         )).filter(Boolean);
 
+        let weeklyHours;
+
+        try {
+            weeklyHours = readWeeklyHoursFromEditor();
+        }
+        catch (error) {
+            alert(error.message);
+            return;
+        }
+
+        const restaurantImage =
+            restaurantImageInput.files &&
+            restaurantImageInput.files.length > 0
+                ? await readFileAsDataUrl(restaurantImageInput.files[0])
+                : restaurantImageInput.dataset.imageRemoved === "true"
+                    ? ""
+                    : existingRestaurant?.image || "";
+
         const restaurantData = {
 
             name:
@@ -1455,9 +1788,7 @@ console.log(
                 ).value.trim(),
 
             hours:
-                document.getElementById(
-                    "restaurantHours"
-                ).value.trim(),
+                weeklyHours,
 
             maps:
                 document.getElementById(
@@ -1465,7 +1796,7 @@ console.log(
                 ).value.trim(),
 
             image:
-                existingRestaurant?.image || "",
+                restaurantImage,
 
             menuImages:
                 menuImages,
@@ -1888,8 +2219,7 @@ function showRestaurantDetail(
 
                             <p>
                                 ${
-                                    restaurant.hours ||
-                                    "尚未提供"
+                                    getHoursSummary(restaurant)
                                 }
                             </p>
 
@@ -2156,10 +2486,7 @@ function openEditRestaurant(
         restaurant.address || "";
 
 
-    document.getElementById(
-        "restaurantHours"
-    ).value =
-        restaurant.hours || "";
+    renderWeeklyHoursEditor(restaurant.hours);
 
 
     // ==================================================
@@ -2206,6 +2533,9 @@ document.getElementById(
 document.querySelectorAll("[id^='restaurantMenu']").forEach(input => {
     input.dataset.menuRemoved = "false";
 });
+
+restaurantImageInput.dataset.imageRemoved = "false";
+updateRestaurantImagePreview(restaurant.image || "");
 
 
 // 顯示目前已儲存的菜單圖片
@@ -2359,6 +2689,8 @@ async function deleteRestaurant(
                     ) !==
                     String(id)
             );
+
+                cleanDisplayOrder();
 
 
         saveRestaurantsLocal();
@@ -2633,6 +2965,109 @@ function updateMenuPreview(
 
         return;
     }
+
+}
+
+
+function updateRestaurantImagePreview(
+    fileOrUrl
+) {
+
+    if (!restaurantImagePreview) {
+        return;
+    }
+
+    if (!fileOrUrl) {
+        restaurantImagePreview.innerHTML = `
+
+            <div class="menu-preview-empty">
+
+                <span class="menu-upload-icon">
+                    🏪
+                </span>
+
+                <p>
+                    點擊上傳餐廳圖片
+                </p>
+
+            </div>
+
+        `;
+
+        return;
+    }
+
+    const imageUrl =
+        fileOrUrl instanceof File
+            ? URL.createObjectURL(fileOrUrl)
+            : fileOrUrl;
+
+    restaurantImagePreview.innerHTML = `
+
+        <img
+            src="${imageUrl}"
+            alt="餐廳圖片預覽"
+            class="menu-preview-image"
+        >
+
+    `;
+
+}
+
+
+function initializeRestaurantImageUpload() {
+
+    if (!restaurantImageInput || !restaurantImagePreview) {
+        return;
+    }
+
+    restaurantImageInput.style.display = "none";
+    restaurantImagePreview.style.cursor = "pointer";
+
+    restaurantImagePreview.addEventListener(
+        "click",
+        () => restaurantImageInput.click()
+    );
+
+    restaurantImageInput.addEventListener(
+        "change",
+        () => {
+
+            const file =
+                restaurantImageInput.files &&
+                restaurantImageInput.files.length > 0
+                    ? restaurantImageInput.files[0]
+                    : null;
+
+            if (!file) {
+                return;
+            }
+
+            if (!file.type.startsWith("image/")) {
+                alert("請選擇圖片檔案。");
+                restaurantImageInput.value = "";
+                return;
+            }
+
+            restaurantImageInput.dataset.imageRemoved = "false";
+            updateRestaurantImagePreview(file);
+
+        }
+    );
+
+    document
+        .getElementById("restaurantImageRemove")
+        .addEventListener(
+            "click",
+            event => {
+
+                event.stopPropagation();
+                restaurantImageInput.value = "";
+                restaurantImageInput.dataset.imageRemoved = "true";
+                updateRestaurantImagePreview("");
+
+            }
+        );
 
 }
 
@@ -4407,6 +4842,9 @@ function openFullscreenMenuImage(
 // Initialize Menu Features
 // ==================================================
 
+initializeDisplaySettings();
+initializeRestaurantImageUpload();
+initializeWeeklyHours();
 initializeMenuPreview();
 
 initializeMenuRemoveButtons();
@@ -4590,7 +5028,7 @@ async function loadRestaurants() {
                 // ------------------------------------------
 
                 hours:
-                    restaurant.opening_hours || "",
+                    normalizeWeeklyHours(restaurant.opening_hours),
 
 
                 // ------------------------------------------
@@ -4644,4 +5082,130 @@ async function loadRestaurants() {
 
     renderRestaurants();
 
+}
+
+function initializeDisplaySettings() {
+    const closeButton = document.getElementById("closeDisplaySettings");
+    const editOrderButton = document.getElementById("editOrderButton");
+
+    displaySettingsButton.addEventListener("click", () => {
+        displaySettingsModal.classList.add("show");
+        updateDisplaySettingsControls();
+    });
+
+    closeButton.addEventListener("click", () => {
+        displaySettingsModal.classList.remove("show");
+    });
+
+    displaySettingsModal.addEventListener("click", event => {
+        if (event.target === displaySettingsModal) {
+            displaySettingsModal.classList.remove("show");
+        }
+    });
+
+    document.querySelectorAll("#fontSizeOptions button").forEach(button => {
+        button.addEventListener("click", () => {
+            displaySettings.fontSize = button.dataset.fontSize;
+            saveDisplaySettings();
+            applyDisplaySettings();
+            updateDisplaySettingsControls();
+        });
+    });
+
+    document.querySelectorAll("#viewModeOptions button").forEach(button => {
+        button.addEventListener("click", () => {
+            displaySettings.viewMode = button.dataset.viewMode;
+            saveDisplaySettings();
+            renderRestaurants();
+            updateDisplaySettingsControls();
+        });
+    });
+
+    editOrderButton.addEventListener("click", () => {
+        displaySettingsModal.classList.remove("show");
+        renderOrderEditor();
+        orderSettingsModal.classList.add("show");
+    });
+
+    document.getElementById("finishOrderButton").addEventListener("click", () => {
+        const orderList = document.getElementById("orderList");
+
+        displaySettings.customOrder = [...orderList.querySelectorAll("[data-order-id]")]
+            .map(item => item.dataset.orderId);
+        saveDisplaySettings();
+        orderSettingsModal.classList.remove("show");
+        renderRestaurants();
+    });
+
+    updateDisplaySettingsControls();
+}
+
+function updateDisplaySettingsControls() {
+    document.querySelectorAll("#fontSizeOptions button").forEach(button => {
+        button.classList.toggle("active", button.dataset.fontSize === displaySettings.fontSize);
+    });
+
+    document.querySelectorAll("#viewModeOptions button").forEach(button => {
+        button.classList.toggle("active", button.dataset.viewMode === displaySettings.viewMode);
+    });
+}
+
+function renderOrderEditor() {
+    const orderList = document.getElementById("orderList");
+    const orderedRestaurants = getOrderedRestaurants(restaurants);
+
+    orderList.innerHTML = orderedRestaurants.map((restaurant, index) => `
+        <div class="order-item" draggable="true" data-order-id="${restaurant.id}">
+            <span class="order-drag-handle">☰</span>
+            <span class="order-item-name">${restaurant.name || "未命名餐廳"}</span>
+            <button type="button" class="order-move-button" data-direction="up" ${index === 0 ? "disabled" : ""}>↑</button>
+            <button type="button" class="order-move-button" data-direction="down" ${index === orderedRestaurants.length - 1 ? "disabled" : ""}>↓</button>
+        </div>
+    `).join("");
+
+    orderList.querySelectorAll(".order-move-button").forEach(button => {
+        button.addEventListener("click", () => {
+            const item = button.closest(".order-item");
+            const target = button.dataset.direction === "up"
+                ? item.previousElementSibling
+                : item.nextElementSibling;
+
+            if (target) {
+                button.dataset.direction === "up"
+                    ? orderList.insertBefore(item, target)
+                    : orderList.insertBefore(target, item);
+                renderOrderEditorButtons();
+            }
+        });
+    });
+
+    let draggedItem;
+
+    orderList.querySelectorAll(".order-item").forEach(item => {
+        item.addEventListener("dragstart", () => {
+            draggedItem = item;
+            item.classList.add("is-dragging");
+        });
+        item.addEventListener("dragend", () => {
+            item.classList.remove("is-dragging");
+            draggedItem = null;
+        });
+        item.addEventListener("dragover", event => {
+            event.preventDefault();
+            if (draggedItem && draggedItem !== item) {
+                const rect = item.getBoundingClientRect();
+                const after = event.clientY > rect.top + rect.height / 2;
+                orderList.insertBefore(draggedItem, after ? item.nextSibling : item);
+            }
+        });
+    });
+}
+
+function renderOrderEditorButtons() {
+    const items = [...document.querySelectorAll("#orderList .order-item")];
+
+    items.forEach((item, index) => {
+        item.querySelector('[data-direction="up"]').disabled = index === 0;
+        item.querySelector('[data-direction="down"]').disabled = index === items.length - 1;
+    });
 }
