@@ -15,6 +15,25 @@
         content="#f7f7f5"
     >
 
+    <script>
+        (() => {
+            const theme = localStorage.getItem("theme") || "system";
+            const isDark = theme === "dark" || (
+                theme === "system" &&
+                window.matchMedia("(prefers-color-scheme: dark)").matches
+            );
+
+            document.documentElement.dataset.theme = isDark ? "dark" : "light";
+
+            if (
+                window.matchMedia("(display-mode: standalone)").matches ||
+                window.navigator.standalone === true
+            ) {
+                document.documentElement.classList.add("app-standalone");
+            }
+        })();
+    </script>
+
     <meta
         name="apple-mobile-web-app-capable"
         content="yes"
@@ -27,10 +46,10 @@
 
     <meta
         name="apple-mobile-web-app-title"
-        content="My Restaurants"
+        content="好店簿"
     >
 
-    <title>My Restaurants</title>
+    <title>好店簿</title>
 
     <link
         rel="manifest"
@@ -43,6 +62,12 @@
     >
 
     <link
+        rel="icon"
+        type="image/png"
+        href="./icons/icon-180.png"
+    >
+
+    <link
         rel="stylesheet"
         href="style.css"
     >
@@ -51,6 +76,15 @@
 
 
 <body>
+
+    <div
+        id="appSplash"
+        class="app-splash"
+        aria-label="好店簿 載入中"
+    >
+        <img src="./icons/icon-180.png" alt="">
+        <span>好店簿</span>
+    </div>
 
 
     <!-- ==================================================
@@ -114,6 +148,16 @@
                     placeholder="搜尋餐廳、分類或地點..."
                     autocomplete="off"
                 >
+
+                <button
+                    type="button"
+                    id="clearSearchButton"
+                    class="clear-search-button"
+                    aria-label="清除搜尋"
+                    hidden
+                >
+                    ×
+                </button>
 
             </div>
 
@@ -358,6 +402,15 @@
                     <div class="settings-segmented" id="viewModeOptions">
                         <button type="button" data-view-mode="card">▦ 卡片</button>
                         <button type="button" data-view-mode="list">☰ 列表</button>
+                    </div>
+                </section>
+
+                <section class="display-setting-section">
+                    <h3>外觀</h3>
+                    <div class="settings-segmented" id="themeOptions">
+                        <button type="button" data-theme-mode="light">☀️ 淺色</button>
+                        <button type="button" data-theme-mode="dark">🌙 深色</button>
+                        <button type="button" data-theme-mode="system">⚙️ 系統</button>
                     </div>
                 </section>
 

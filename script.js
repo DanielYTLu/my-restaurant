@@ -37,6 +37,41 @@ const favoriteSyncVersions = new Map();
 
 const displaySettings = loadDisplaySettings();
 
+const themePreference =
+    localStorage.getItem("theme") || "system";
+
+function isDarkTheme(theme = themePreference) {
+    return theme === "dark" || (
+        theme === "system" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+    );
+}
+
+function applyTheme(theme) {
+    document.documentElement.dataset.theme = isDarkTheme(theme)
+        ? "dark"
+        : "light";
+
+    const themeColor =
+        document.querySelector('meta[name="theme-color"]');
+
+    themeColor?.setAttribute(
+        "content",
+        isDarkTheme(theme) ? "#171716" : "#f7f7f5"
+    );
+}
+
+function initializeTheme() {
+    applyTheme(themePreference);
+
+    window.matchMedia("(prefers-color-scheme: dark)")
+        .addEventListener("change", () => {
+            if (localStorage.getItem("theme") === "system") {
+                applyTheme("system");
+            }
+        });
+}
+
 function loadDisplaySettings() {
     try {
         const saved = JSON.parse(localStorage.getItem("displaySettings"));
@@ -58,6 +93,23 @@ function loadDisplaySettings() {
 
 function saveDisplaySettings() {
     localStorage.setItem("displaySettings", JSON.stringify(displaySettings));
+}
+
+function showToast(message, type = "info") {
+    const previousToast = document.querySelector(".toast");
+
+    previousToast?.remove();
+
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.setAttribute("role", "status");
+    document.body.appendChild(toast);
+
+    window.setTimeout(() => {
+        toast.classList.add("is-leaving");
+        toast.addEventListener("animationend", () => toast.remove(), { once: true });
+    }, 1700);
 }
 
 function getOrderedRestaurants(source = restaurants) {
@@ -97,6 +149,11 @@ const restaurantList =
 const searchInput =
     document.getElementById(
         "searchInput"
+    );
+
+const clearSearchButton =
+    document.getElementById(
+        "clearSearchButton"
     );
 
 const categories =
@@ -244,8 +301,43 @@ async function initialize() {
     console.log("🚀 餐廳管理系統啟動");
 
     // 從 Supabase 載入餐廳
-    await loadRestaurants();
+    showSkeletonLoading();
+    try {
+        await loadRestaurants();
+    }
+    catch (error) {
+        console.error("❌ 餐廳資料載入失敗：", error);
+        loadRestaurantsFromLocal();
+    }
+    finally {
+        finishAppStartup();
+    }
 
+}
+
+function loadRestaurantsFromLocal() {
+    try {
+        const savedRestaurants = JSON.parse(
+            localStorage.getItem("restaurants") || "[]"
+        );
+
+        restaurants = Array.isArray(savedRestaurants)
+            ? savedRestaurants.map(restaurant => ({
+                ...restaurant,
+                id: String(restaurant.id),
+                menuImages: Array.isArray(restaurant.menuImages)
+                    ? restaurant.menuImages.filter(Boolean)
+                    : [],
+                hours: normalizeWeeklyHours(restaurant.hours)
+            }))
+            : [];
+    }
+    catch {
+        restaurants = [];
+    }
+
+    cleanDisplayOrder();
+    renderRestaurants();
 }
 
 
@@ -936,25 +1028,7 @@ function renderRestaurants(
         visibleRestaurants.length === 0
     ) {
 
-        restaurantList.innerHTML = `
-
-            <div class="empty-state">
-
-                <div class="empty-icon">
-                    🍽️
-                </div>
-
-                <h2>
-                    還沒有餐廳
-                </h2>
-
-                <p>
-                    點擊右下角 ＋ 新增你的第一間餐廳
-                </p>
-
-            </div>
-
-        `;
+        renderEmptyState(restaurantData);
 
         return;
 
@@ -1007,7 +1081,13 @@ function createRestaurantCard(
             <img
                 src="${restaurant.image || ""}"
                 alt="${restaurant.name}"
+                onerror="this.hidden=true; this.nextElementSibling.hidden=false"
             >
+
+            <div class="restaurant-image-placeholder" hidden aria-hidden="true">
+                <span>🍽️</span>
+                <small>尚未提供圖片</small>
+            </div>
 
             <button
                 class="
@@ -1015,6 +1095,8 @@ function createRestaurantCard(
                     ${restaurant.favorite ? "liked" : ""}
                 "
                 data-id="${restaurant.id}"
+                aria-label="${restaurant.favorite ? "取消收藏" : "收藏"} ${restaurant.name}"
+                aria-pressed="${restaurant.favorite}"
             >
 
                 ${restaurant.favorite ? "♥" : "♡"}
@@ -1195,6 +1277,18 @@ async function toggleFavorite(id, favoriteButton) {
 
     favoriteButton.classList.toggle("liked", newFavorite);
     favoriteButton.textContent = newFavorite ? "♥" : "♡";
+    favoriteButton.setAttribute("aria-pressed", String(newFavorite));
+    favoriteButton.setAttribute(
+        "aria-label",
+        `${newFavorite ? "取消收藏" : "收藏"} ${restaurants[index].name}`
+    );
+    favoriteButton.classList.remove("favorite-pop");
+    void favoriteButton.offsetWidth;
+    favoriteButton.classList.add("favorite-pop");
+    showToast(
+        newFavorite ? "♥ 已加入收藏" : "♡ 已取消收藏",
+        "success"
+    );
 
     const syncVersion =
         (favoriteSyncVersions.get(String(id)) || 0) + 1;
@@ -1252,6 +1346,8 @@ async function toggleFavorite(id, favoriteButton) {
                 saveRestaurantsLocal();
                 favoriteButton.classList.toggle("liked", previousFavorite);
                 favoriteButton.textContent = previousFavorite ? "♥" : "♡";
+                favoriteButton.setAttribute("aria-pressed", String(previousFavorite));
+                showToast("⚠ 收藏同步失敗，已恢復原狀態", "warning");
 
                 if (
                     activeCategory === "收藏"
@@ -1324,6 +1420,22 @@ searchInput.addEventListener(
                             .toLowerCase()
                             .includes(keyword)
 
+                        ||
+
+                        (
+                            restaurant.description || ""
+                        )
+                            .toLowerCase()
+                            .includes(keyword)
+
+                        ||
+
+                        JSON.stringify(
+                            restaurant.hours || ""
+                        )
+                            .toLowerCase()
+                            .includes(keyword)
+
                     );
 
                 }
@@ -1334,6 +1446,18 @@ searchInput.addEventListener(
             filtered
         );
 
+        clearSearchButton.hidden = keyword.length === 0;
+
+    }
+);
+
+clearSearchButton.addEventListener(
+    "click",
+    () => {
+        searchInput.value = "";
+        clearSearchButton.hidden = true;
+        renderRestaurants();
+        searchInput.focus();
     }
 );
 
@@ -4866,6 +4990,7 @@ function openFullscreenMenuImage(
 // Initialize Menu Features
 // ==================================================
 
+initializeTheme();
 initializeDisplaySettings();
 initializeRestaurantImageUpload();
 initializeWeeklyHours();
@@ -4999,6 +5124,8 @@ async function loadRestaurants() {
             "❌ Supabase 讀取餐廳失敗：",
             error
         );
+
+        loadRestaurantsFromLocal();
 
         return;
 
@@ -5168,6 +5295,16 @@ function initializeDisplaySettings() {
         });
     });
 
+    document.querySelectorAll("#themeOptions button").forEach(button => {
+        button.addEventListener("click", () => {
+            const theme = button.dataset.themeMode;
+
+            localStorage.setItem("theme", theme);
+            applyTheme(theme);
+            updateDisplaySettingsControls();
+        });
+    });
+
     editOrderButton.addEventListener("click", () => {
         displaySettingsModal.classList.remove("show");
         renderOrderEditor();
@@ -5194,6 +5331,13 @@ function updateDisplaySettingsControls() {
 
     document.querySelectorAll("#viewModeOptions button").forEach(button => {
         button.classList.toggle("active", button.dataset.viewMode === displaySettings.viewMode);
+    });
+
+    document.querySelectorAll("#themeOptions button").forEach(button => {
+        button.classList.toggle(
+            "active",
+            button.dataset.themeMode === (localStorage.getItem("theme") || "system")
+        );
     });
 }
 
@@ -5255,4 +5399,89 @@ function renderOrderEditorButtons() {
         item.querySelector('[data-direction="up"]').disabled = index === 0;
         item.querySelector('[data-direction="down"]').disabled = index === items.length - 1;
     });
+}
+
+function renderEmptyState(restaurantData) {
+    const keyword = searchInput.value.trim();
+    const activeCategory =
+        document.querySelector(".category.active")?.dataset.category;
+    const isSearchEmpty = keyword.length > 0;
+    const isFavoriteEmpty = activeCategory === "收藏";
+    const icon = isSearchEmpty ? "🔍" : isFavoriteEmpty ? "♡" : "🏪";
+    const title = isSearchEmpty
+        ? "找不到店家"
+        : isFavoriteEmpty
+            ? "還沒有收藏"
+            : "還沒有店家";
+    const description = isSearchEmpty
+        ? `沒有符合「${escapeHtml(keyword)}」的結果`
+        : isFavoriteEmpty
+            ? "點擊店家上的愛心，收藏喜歡的店家"
+            : "新增你常去的店家，開始建立自己的店家清單";
+
+    restaurantList.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-icon">${icon}</div>
+            <h2>${title}</h2>
+            <p>${description}</p>
+            ${isSearchEmpty ? "" : `
+                <button type="button" class="empty-state-button" data-empty-action="${isFavoriteEmpty ? "all" : "add"}">
+                    ${isFavoriteEmpty ? "查看全部店家" : "＋ 新增店家"}
+                </button>
+            `}
+        </div>
+    `;
+
+    const action = restaurantList.querySelector("[data-empty-action]");
+
+    action?.addEventListener("click", () => {
+        if (action.dataset.emptyAction === "add") {
+            addRestaurantButton.click();
+            return;
+        }
+
+        document.querySelector('[data-category="全部"]')?.click();
+    });
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function showSkeletonLoading() {
+    restaurantList.innerHTML = Array.from({ length: 3 }, () => `
+        <article class="skeleton-card" aria-hidden="true">
+            <div class="skeleton-block skeleton-image"></div>
+            <div class="skeleton-content">
+                <div class="skeleton-block skeleton-title"></div>
+                <div class="skeleton-block skeleton-line"></div>
+                <div class="skeleton-block skeleton-line short"></div>
+            </div>
+        </article>
+    `).join("");
+}
+
+function finishAppStartup() {
+    const splash = document.getElementById("appSplash");
+
+    if (!splash) {
+        return;
+    }
+
+    const isStandalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true;
+
+    if (!isStandalone) {
+        splash.remove();
+        return;
+    }
+
+    splash.classList.add("is-leaving");
+    splash.addEventListener("animationend", () => splash.remove(), { once: true });
 }

@@ -1,6 +1,6 @@
 {
-  "name": "My Restaurants",
-  "short_name": "我的餐廳",
+  "name": "好店簿",
+  "short_name": "好店簿",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
