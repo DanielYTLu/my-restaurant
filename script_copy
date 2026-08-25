@@ -2481,14 +2481,11 @@ function updateMenuPreview(
             `menuPreview${menuNumber}`
         );
 
+
     if (!preview) {
-
-        console.error(
-            `❌ 找不到 menuPreview${menuNumber}`
-        );
-
         return;
     }
+
 
     // ==================================================
     // 沒有圖片
@@ -2496,51 +2493,37 @@ function updateMenuPreview(
 
     if (!fileOrUrl) {
 
-        preview.innerHTML = `
+    preview.innerHTML = `
 
-            <div class="menu-preview-empty">
+        <div class="menu-preview-empty">
 
-                <span class="menu-upload-icon">
-                    📖
-                </span>
+            <span class="menu-upload-icon">
+                📖
+            </span>
 
-                <p>
-                    點擊上傳菜單圖片
-                </p>
+            <p>
+                點擊上傳菜單圖片
+            </p>
 
-            </div>
+        </div>
 
-        `;
+    `;
 
-        return;
-    }
+    return;
+}
+
 
     // ==================================================
-    // 使用者剛剛選擇的 File
+    // 如果是 File
     // ==================================================
 
-    if (
-        fileOrUrl instanceof File
-    ) {
-
-        console.log(
-            `📷 菜單 ${menuNumber} File：`,
-            fileOrUrl
-        );
-
-        // ----------------------------------------------
-        // 建立瀏覽器暫時圖片網址
-        // ----------------------------------------------
+    if (fileOrUrl instanceof File) {
 
         const imageURL =
             URL.createObjectURL(
                 fileOrUrl
             );
 
-        console.log(
-            `🖼️ 菜單 ${menuNumber} 預覽網址：`,
-            imageURL
-        );
 
         preview.innerHTML = `
 
@@ -2549,19 +2532,21 @@ function updateMenuPreview(
                 alt="菜單 ${menuNumber}"
                 class="menu-preview-image"
             >
-
         `;
 
+
         return;
+
     }
 
+
     // ==================================================
-    // 已經存在的圖片 URL
-    // 例如編輯餐廳時使用
+    // 如果是舊資料的圖片 URL
     // ==================================================
 
     if (
-        typeof fileOrUrl === "string"
+        typeof fileOrUrl === "string" &&
+        fileOrUrl.trim() !== ""
     ) {
 
         preview.innerHTML = `
@@ -2572,13 +2557,38 @@ function updateMenuPreview(
                 class="menu-preview-image"
             >
 
+            <p>
+                目前菜單圖片
+            </p>
+
         `;
 
         return;
+
     }
 
-}
 
+    // ==================================================
+    // 其他情況
+    // ==================================================
+
+    preview.innerHTML = `
+
+        <div class="menu-preview-empty">
+
+            <span>
+                📖
+            </span>
+
+            <p>
+                尚未加入菜單圖片
+            </p>
+
+        </div>
+
+    `;
+
+}
 
 
 // ==================================================
