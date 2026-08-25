@@ -372,7 +372,7 @@ function mapSupabaseToRestaurant(
             Array.isArray(
                 row.menu_images
             )
-                ? row.menu_images
+                ? row.menu_images.filter(Boolean)
                 : [],
 
 
@@ -821,7 +821,7 @@ function createRestaurantCard(
 
     const menuCount =
         restaurant.menuImages
-            ? restaurant.menuImages.length
+            ? restaurant.menuImages.filter(Boolean).length
             : 0;
 
 
@@ -1234,6 +1234,10 @@ addRestaurantButton.addEventListener(
 
         restaurantForm.reset();
 
+        document.querySelectorAll("[id^='restaurantMenu']").forEach(input => {
+            input.dataset.menuRemoved = "false";
+        });
+
 
         updateMenuPreview(
             1,
@@ -1295,6 +1299,10 @@ function closeRestaurantModal() {
 
     restaurantForm.reset();
 
+    document.querySelectorAll("[id^='restaurantMenu']").forEach(input => {
+        input.dataset.menuRemoved = "false";
+    });
+
 
     delete restaurantForm.dataset.editingId;
 
@@ -1323,6 +1331,20 @@ function closeRestaurantModal() {
 // Submit Form
 // ==================================================
 
+function readFileAsDataUrl(file) {
+
+    return new Promise((resolve, reject) => {
+
+        const reader = new FileReader();
+
+        reader.addEventListener("load", () => resolve(reader.result));
+        reader.addEventListener("error", () => reject(reader.error));
+        reader.readAsDataURL(file);
+
+    });
+
+}
+
 restaurantForm.addEventListener(
     "submit",
     async event => {
@@ -1334,27 +1356,30 @@ restaurantForm.addEventListener(
             restaurantForm.dataset.editingId;
 
 
-        // ==================================================
-        // 取得菜單圖片
-        // ==================================================
+// ==================================================
+// 取得菜單圖片
+// ==================================================
 
-        const menuImages = [
+const menuInputs = [
+    document.getElementById("restaurantMenu1"),
+    document.getElementById("restaurantMenu2"),
+    document.getElementById("restaurantMenu3")
+];
 
-            document.getElementById(
-                "restaurantMenu1"
-            ).value.trim(),
+// ==================================================
+// 取得目前使用者選擇的圖片 File
+// ==================================================
 
-            document.getElementById(
-                "restaurantMenu2"
-            ).value.trim(),
+const selectedMenuFiles = menuInputs.map(input =>
+    input && input.files && input.files.length > 0
+        ? input.files[0]
+        : null
+);
 
-            document.getElementById(
-                "restaurantMenu3"
-            ).value.trim()
-
-        ].filter(
-            url => url !== ""
-        );
+console.log(
+    "📷 使用者選擇的菜單圖片：",
+    selectedMenuFiles
+);
 
 
         // ==================================================
@@ -1382,6 +1407,22 @@ console.log(
                         )
                 )
                 : null;
+
+        const menuImages = (await Promise.all(
+            selectedMenuFiles.map(async (file, index) => {
+
+                if (file) {
+                    return readFileAsDataUrl(file);
+                }
+
+                if (menuInputs[index]?.dataset.menuRemoved === "true") {
+                    return null;
+                }
+
+                return existingRestaurant?.menuImages?.[index] || "";
+
+            })
+        )).filter(Boolean);
 
         const restaurantData = {
 
@@ -2162,6 +2203,10 @@ document.getElementById(
     "restaurantMenu3"
 ).value = "";
 
+document.querySelectorAll("[id^='restaurantMenu']").forEach(input => {
+    input.dataset.menuRemoved = "false";
+});
+
 
 // 顯示目前已儲存的菜單圖片
 updateMenuPreview(
@@ -2434,6 +2479,8 @@ function initializeMenuPreview() {
                     return;
                 }
 
+                input.dataset.menuRemoved = "false";
+
                 // ----------------------------------
                 // 確認是不是圖片
                 // ----------------------------------
@@ -2481,11 +2528,14 @@ function updateMenuPreview(
             `menuPreview${menuNumber}`
         );
 
-
     if (!preview) {
+
+        console.error(
+            `❌ 找不到 menuPreview${menuNumber}`
+        );
+
         return;
     }
-
 
     // ==================================================
     // 沒有圖片
@@ -2493,37 +2543,51 @@ function updateMenuPreview(
 
     if (!fileOrUrl) {
 
-    preview.innerHTML = `
+        preview.innerHTML = `
 
-        <div class="menu-preview-empty">
+            <div class="menu-preview-empty">
 
-            <span class="menu-upload-icon">
-                📖
-            </span>
+                <span class="menu-upload-icon">
+                    📖
+                </span>
 
-            <p>
-                點擊上傳菜單圖片
-            </p>
+                <p>
+                    點擊上傳菜單圖片
+                </p>
 
-        </div>
+            </div>
 
-    `;
+        `;
 
-    return;
-}
-
+        return;
+    }
 
     // ==================================================
-    // 如果是 File
+    // 使用者剛剛選擇的 File
     // ==================================================
 
-    if (fileOrUrl instanceof File) {
+    if (
+        fileOrUrl instanceof File
+    ) {
+
+        console.log(
+            `📷 菜單 ${menuNumber} File：`,
+            fileOrUrl
+        );
+
+        // ----------------------------------------------
+        // 建立瀏覽器暫時圖片網址
+        // ----------------------------------------------
 
         const imageURL =
             URL.createObjectURL(
                 fileOrUrl
             );
 
+        console.log(
+            `🖼️ 菜單 ${menuNumber} 預覽網址：`,
+            imageURL
+        );
 
         preview.innerHTML = `
 
@@ -2532,22 +2596,30 @@ function updateMenuPreview(
                 alt="菜單 ${menuNumber}"
                 class="menu-preview-image"
             >
+
         `;
 
-
         return;
-
     }
 
-
     // ==================================================
-    // 如果是舊資料的圖片 URL
+    // 已經存在的圖片 URL
+    // 例如編輯餐廳時使用
     // ==================================================
 
     if (
-        typeof fileOrUrl === "string" &&
-        fileOrUrl.trim() !== ""
+        typeof fileOrUrl === "string"
     ) {
+
+        if (
+            fileOrUrl.startsWith("C:\\fakepath\\") ||
+            fileOrUrl.startsWith("file:///")
+        ) {
+
+            updateMenuPreview(menuNumber, "");
+
+            return;
+        }
 
         preview.innerHTML = `
 
@@ -2557,38 +2629,13 @@ function updateMenuPreview(
                 class="menu-preview-image"
             >
 
-            <p>
-                目前菜單圖片
-            </p>
-
         `;
 
         return;
-
     }
 
-
-    // ==================================================
-    // 其他情況
-    // ==================================================
-
-    preview.innerHTML = `
-
-        <div class="menu-preview-empty">
-
-            <span>
-                📖
-            </span>
-
-            <p>
-                尚未加入菜單圖片
-            </p>
-
-        </div>
-
-    `;
-
 }
+
 
 
 // ==================================================
@@ -2616,6 +2663,8 @@ function clearMenuImage(
 
     input.value =
         "";
+
+    input.dataset.menuRemoved = "true";
 
 
     updateMenuPreview(
@@ -2671,7 +2720,7 @@ function openMenuViewer(
 ) {
 
     const menuImages =
-        restaurant.menuImages || [];
+        (restaurant.menuImages || []).filter(Boolean);
 
 
     if (
@@ -4560,7 +4609,7 @@ async function loadRestaurants() {
                     Array.isArray(
                         restaurant.menu_images
                     )
-                        ? restaurant.menu_images
+                        ? restaurant.menu_images.filter(Boolean)
                         : [],
 
 

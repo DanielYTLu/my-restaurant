@@ -372,7 +372,7 @@ function mapSupabaseToRestaurant(
             Array.isArray(
                 row.menu_images
             )
-                ? row.menu_images
+                ? row.menu_images.filter(Boolean)
                 : [],
 
 
@@ -821,7 +821,7 @@ function createRestaurantCard(
 
     const menuCount =
         restaurant.menuImages
-            ? restaurant.menuImages.length
+            ? restaurant.menuImages.filter(Boolean).length
             : 0;
 
 
@@ -1234,6 +1234,10 @@ addRestaurantButton.addEventListener(
 
         restaurantForm.reset();
 
+        document.querySelectorAll("[id^='restaurantMenu']").forEach(input => {
+            input.dataset.menuRemoved = "false";
+        });
+
 
         updateMenuPreview(
             1,
@@ -1294,6 +1298,10 @@ function closeRestaurantModal() {
 
 
     restaurantForm.reset();
+
+    document.querySelectorAll("[id^='restaurantMenu']").forEach(input => {
+        input.dataset.menuRemoved = "false";
+    });
 
 
     delete restaurantForm.dataset.editingId;
@@ -1400,17 +1408,21 @@ console.log(
                 )
                 : null;
 
-        const menuImages = await Promise.all(
+        const menuImages = (await Promise.all(
             selectedMenuFiles.map(async (file, index) => {
 
                 if (file) {
                     return readFileAsDataUrl(file);
                 }
 
+                if (menuInputs[index]?.dataset.menuRemoved === "true") {
+                    return null;
+                }
+
                 return existingRestaurant?.menuImages?.[index] || "";
 
             })
-        );
+        )).filter(Boolean);
 
         const restaurantData = {
 
@@ -2191,6 +2203,10 @@ document.getElementById(
     "restaurantMenu3"
 ).value = "";
 
+document.querySelectorAll("[id^='restaurantMenu']").forEach(input => {
+    input.dataset.menuRemoved = "false";
+});
+
 
 // 顯示目前已儲存的菜單圖片
 updateMenuPreview(
@@ -2463,6 +2479,8 @@ function initializeMenuPreview() {
                     return;
                 }
 
+                input.dataset.menuRemoved = "false";
+
                 // ----------------------------------
                 // 確認是不是圖片
                 // ----------------------------------
@@ -2646,6 +2664,8 @@ function clearMenuImage(
     input.value =
         "";
 
+    input.dataset.menuRemoved = "true";
+
 
     updateMenuPreview(
         menuNumber,
@@ -2700,7 +2720,7 @@ function openMenuViewer(
 ) {
 
     const menuImages =
-        restaurant.menuImages || [];
+        (restaurant.menuImages || []).filter(Boolean);
 
 
     if (
@@ -4589,7 +4609,7 @@ async function loadRestaurants() {
                     Array.isArray(
                         restaurant.menu_images
                     )
-                        ? restaurant.menu_images
+                        ? restaurant.menu_images.filter(Boolean)
                         : [],
 
 
