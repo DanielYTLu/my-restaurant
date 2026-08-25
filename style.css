@@ -431,6 +431,15 @@ img {
 
     color: #9a741c;
 
+    .font-extra-small .restaurant-title h2 {
+        font-size: 16px;
+    }
+    .font-extra-small .location,
+    .font-extra-small .hours,
+    .font-extra-small .rating,
+    .font-extra-small .card-actions button {
+        font-size: 10px;
+    }
 }
 
 
@@ -2274,6 +2283,22 @@ img {
 .font-large .card-actions button {
     font-size: 14px;
 }
+    .font-extra-large .restaurant-title h2 {
+        font-size: 23px;
+    }
+    .font-extra-large .location,
+    .font-extra-large .hours,
+    .font-extra-large .rating,
+    .font-extra-large .card-actions button {
+        font-size: 15px;
+    }
+    .font-extra-large .restaurant-title h2,
+    .font-extra-large .location,
+    .font-extra-large .hours,
+    .font-extra-large .rating,
+    .font-extra-large .card-actions button {
+        overflow-wrap: anywhere;
+    }
 
 .display-settings-sheet {
     width: 100%;
@@ -2379,6 +2404,14 @@ img {
 
 .order-move-button:disabled {
     opacity: 0.35;
+    #fontSizeOptions {
+        gap: 4px;
+    }
+    #fontSizeOptions button {
+        min-width: 0;
+        padding: 0 5px;
+        font-size: 12px;
+    }
 }
 
 .order-item.is-dragging {

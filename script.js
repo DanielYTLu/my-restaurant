@@ -42,7 +42,7 @@ function loadDisplaySettings() {
         const saved = JSON.parse(localStorage.getItem("displaySettings"));
 
         return {
-            fontSize: ["small", "medium", "large"].includes(saved?.fontSize)
+            fontSize: ["extra-small", "small", "medium", "large", "extra-large"].includes(saved?.fontSize)
                 ? saved.fontSize
                 : "medium",
             viewMode: saved?.viewMode === "list" ? "list" : "card",
@@ -73,7 +73,13 @@ function getOrderedRestaurants(source = restaurants) {
 }
 
 function applyDisplaySettings() {
-    document.body.classList.remove("font-small", "font-medium", "font-large");
+    document.body.classList.remove(
+        "font-extra-small",
+        "font-small",
+        "font-medium",
+        "font-large",
+        "font-extra-large"
+    );
     document.body.classList.add(`font-${displaySettings.fontSize}`);
     restaurantList.classList.toggle("list-view", displaySettings.viewMode === "list");
 }
@@ -1106,7 +1112,8 @@ function createRestaurantCard(
                 event.stopPropagation();
 
                 toggleFavorite(
-                    restaurant.id
+                    restaurant.id,
+                    event.currentTarget
                 );
 
             }
@@ -1161,7 +1168,7 @@ function createRestaurantCard(
 // Favorite
 // ==================================================
 
-async function toggleFavorite(id) {
+async function toggleFavorite(id, favoriteButton) {
 
     const index = restaurants.findIndex(
         restaurant =>
@@ -1186,6 +1193,9 @@ async function toggleFavorite(id) {
     restaurants[index].favorite =
         newFavorite;
 
+    favoriteButton.classList.toggle("liked", newFavorite);
+    favoriteButton.textContent = newFavorite ? "♥" : "♡";
+
     const syncVersion =
         (favoriteSyncVersions.get(String(id)) || 0) + 1;
 
@@ -1199,8 +1209,15 @@ async function toggleFavorite(id) {
     saveRestaurantsLocal();
 
 
-    // 立即重新渲染
-    renderRestaurants();
+    const activeCategory =
+        document.querySelector(".category.active")?.dataset.category;
+
+    if (
+        activeCategory === "收藏" &&
+        !newFavorite
+    ) {
+        renderRestaurants();
+    }
 
 
     // ==================================================
@@ -1233,7 +1250,14 @@ async function toggleFavorite(id) {
                     previousFavorite;
 
                 saveRestaurantsLocal();
-                renderRestaurants();
+                favoriteButton.classList.toggle("liked", previousFavorite);
+                favoriteButton.textContent = previousFavorite ? "♥" : "♡";
+
+                if (
+                    activeCategory === "收藏"
+                ) {
+                    renderRestaurants();
+                }
 
             }
 
