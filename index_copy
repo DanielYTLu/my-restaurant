@@ -62,6 +62,12 @@
     >
 
     <link
+        rel="icon"
+        type="image/png"
+        href="./icons/icon-180.png"
+    >
+
+    <link
         rel="stylesheet"
         href="style.css"
     >
