@@ -4155,3 +4155,77 @@ body.font-extra-large .card-actions button {
 .voice-search-status.is-visible {
     display: flex;
 }
+
+/* ==================================================
+   Category Horizontal Scroll
+================================================== */
+
+.category-section {
+    width: 100%;
+    overflow: hidden;
+}
+
+.category-scroll {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+
+    width: 100%;
+    max-width: 100%;
+
+    gap: 8px;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    padding: 4px 2px 8px;
+
+    box-sizing: border-box;
+
+    white-space: nowrap;
+
+    -webkit-overflow-scrolling: touch;
+
+    scrollbar-width: none;
+}
+
+.category-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.category-scroll .category {
+    flex: 0 0 auto;
+
+    width: auto;
+    min-width: max-content;
+
+    white-space: nowrap;
+}
+
+.phone {
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+
+    margin-top: 7px;
+
+    color: inherit;
+    text-decoration: none;
+
+    font-size: inherit;
+
+    cursor: pointer;
+
+    transition:
+        opacity 0.2s ease,
+        transform 0.15s ease;
+}
+
+.phone:hover {
+    opacity: 0.75;
+}
+
+.phone:active {
+    transform: scale(0.98);
+}

@@ -1326,6 +1326,14 @@ article.innerHTML = `
             📍
             ${restaurant.address || "尚未提供地址"}
         </p>
+
+            <button
+            type="button"
+            class="hours"
+            data-hours-id="${restaurant.id}"
+        >
+            ${getHoursSummary(restaurant)}
+        </button>
         ${
     phoneDisplay
         ? `
@@ -1341,13 +1349,7 @@ article.innerHTML = `
         : ""
 }
 
-        <button
-            type="button"
-            class="hours"
-            data-hours-id="${restaurant.id}"
-        >
-            ${getHoursSummary(restaurant)}
-        </button>
+
 
 
         <div class="card-actions">
