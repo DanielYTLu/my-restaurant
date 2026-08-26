@@ -3951,3 +3951,207 @@ body.font-extra-large .card-actions button {
     }
 
 }
+.restaurant-phone {
+    display: block;
+    margin-top: 6px;
+    color: inherit;
+    text-decoration: none;
+}
+
+.restaurant-phone:hover {
+    text-decoration: underline;
+}
+
+/* ==================================================
+   Voice Search
+================================================== */
+
+.voice-search-button {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex: 0 0 40px;
+
+    width: 40px;
+    height: 40px;
+
+    margin-right: 2px;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 50%;
+
+    background: transparent;
+    color: inherit;
+
+    font-size: 19px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    -webkit-tap-highlight-color: transparent;
+
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+
+.voice-search-button:hover {
+    background: rgba(128, 128, 128, 0.12);
+}
+
+.voice-search-button:active {
+    transform: scale(0.88);
+}
+
+
+/* ===============================
+   Listening
+================================ */
+
+.voice-search-button.listening {
+    background: rgba(220, 70, 70, 0.12);
+
+    animation:
+        voice-button-pulse 1.4s infinite;
+}
+
+.voice-search-button.listening::after {
+
+    content: "";
+
+    position: absolute;
+
+    inset: -4px;
+
+    border-radius: 50%;
+
+    border: 2px solid rgba(220, 70, 70, 0.25);
+
+    animation:
+        voice-ring-pulse 1.4s infinite;
+}
+
+
+/* ===============================
+   Status
+================================ */
+
+.voice-search-status {
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 8px;
+
+    margin-top: 8px;
+
+    font-size: 13px;
+
+    color: #777;
+
+    animation:
+        voice-status-enter 0.2s ease;
+}
+
+.voice-status-dot {
+
+    width: 7px;
+    height: 7px;
+
+    flex: 0 0 7px;
+
+    border-radius: 50%;
+
+    background: #d84b4b;
+
+    animation:
+        voice-dot-pulse 1s infinite;
+}
+
+
+/* ===============================
+   Animations
+================================ */
+
+@keyframes voice-button-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+}
+
+@keyframes voice-ring-pulse {
+
+    0% {
+        opacity: 0.8;
+        transform: scale(0.9);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(1.25);
+    }
+
+}
+
+@keyframes voice-dot-pulse {
+
+    0%,
+    100% {
+        opacity: 0.4;
+        transform: scale(0.8);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.15);
+    }
+
+}
+
+@keyframes voice-status-enter {
+
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+
+/* ===============================
+   Dark Mode
+================================ */
+
+[data-theme="dark"] .voice-search-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .voice-search-status {
+    color: #aaa;
+}
+.voice-search-status {
+    display: none;
+}
+
+.voice-search-status.is-visible {
+    display: flex;
+}

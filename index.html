@@ -38,7 +38,10 @@
         name="apple-mobile-web-app-capable"
         content="yes"
     >
-
+    <meta
+    name="mobile-web-app-capable"
+    content="yes"
+    >
     <meta
         name="apple-mobile-web-app-status-bar-style"
         content="default"
@@ -131,43 +134,59 @@
 
 
         <!-- ==================================================
-             Search
-        =================================================== -->
+     Search
+================================================== -->
 
-        <section class="search-section">
+<section class="search-section">
 
-            <div class="search-box">
+    <div class="search-box">
 
-                <span class="search-icon">
-                    ⌕
-                </span>
+        <span class="search-icon">
+            ⌕
+        </span>
 
-                <input
-                    type="search"
-                    id="searchInput"
-                    placeholder="搜尋餐廳、分類或地點..."
-                    autocomplete="off"
-                >
+        <input
+            type="search"
+            id="searchInput"
+            placeholder="搜尋餐廳、分類或地點..."
+            autocomplete="off"
+        >
 
-                <button
-                    type="button"
-                    id="clearSearchButton"
-                    class="clear-search-button"
-                    aria-label="清除搜尋"
-                    hidden
-                >
-                    ×
-                </button>
+        <button
+            type="button"
+            id="voiceSearchButton"
+            class="voice-search-button"
+            aria-label="語音搜尋"
+            title="語音搜尋"
+        >
+            <span class="voice-search-icon">⌕</span>
+            <span class="voice-mic-icon">●</span>
+        </button>
 
-            </div>
+        <button
+            type="button"
+            id="clearSearchButton"
+            class="clear-search-button"
+            aria-label="清除搜尋"
+            hidden
+        >
+            ×
+        </button>
 
-        </section>
+    </div>
 
+    <div
+    id="voiceSearchStatus"
+    class="voice-search-status"
+    style="display: none;"
+>
+        <span class="voice-status-dot"></span>
+        <span id="voiceSearchStatusText">
+            正在聆聽…
+        </span>
+    </div>
 
-
-       <section class="category-section">
-
-    <div class="category-scroll">
+</section>
 
         <!-- 全部 -->
         <button
@@ -1017,9 +1036,9 @@
 </div>
 
 
-<script
-    src="script.js"
-></script>
+<script src="script.js"></script>
+
+
 
 </body>
 

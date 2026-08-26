@@ -1239,7 +1239,8 @@ function createRestaurantCard(
         restaurant.menuImages
             ? restaurant.menuImages.filter(Boolean).length
             : 0;
-
+    const phoneDisplay = restaurant.phone || "";
+    const phoneTel = phoneDisplay.replace(/[^\d+]/g, "");
         const restaurantImage =
     getRestaurantImageSrc(restaurant.image);
 
@@ -1325,7 +1326,20 @@ article.innerHTML = `
             📍
             ${restaurant.address || "尚未提供地址"}
         </p>
-
+        ${
+    phoneDisplay
+        ? `
+            <a
+                href="tel:${phoneTel}"
+                class="restaurant-phone"
+                aria-label="撥打 ${phoneDisplay}"
+            >
+                📞
+                ${phoneDisplay}
+            </a>
+        `
+        : ""
+}
 
         <button
             type="button"
@@ -1617,84 +1631,422 @@ async function toggleFavorite(id, favoriteButton) {
 // Search
 // ==================================================
 
-searchInput.addEventListener(
-    "input",
-    () => {
+function performRestaurantSearch() {
 
-        const keyword =
-            searchInput.value
-                .trim()
-                .toLowerCase();
+    const keyword =
+        searchInput.value
+            .trim()
+            .toLowerCase();
 
 
-        const filtered =
-            restaurants.filter(
-                restaurant => {
+    const filtered =
+        restaurants.filter(
+            restaurant => {
 
-                    return (
+                return (
 
-                        (
-                            restaurant.name || ""
-                        )
-                            .toLowerCase()
-                            .includes(keyword)
+                    (
+                        restaurant.name || ""
+                    )
+                        .toLowerCase()
+                        .includes(keyword)
 
-                        ||
+                    ||
 
-                        (
-                            restaurant.category || ""
-                        )
-                            .toLowerCase()
-                            .includes(keyword)
+                    (
+                        restaurant.category || ""
+                    )
+                        .toLowerCase()
+                        .includes(keyword)
 
-                        ||
+                    ||
 
-                        (
-                            restaurant.address || ""
-                        )
-                            .toLowerCase()
-                            .includes(keyword)
+                    (
+                        restaurant.address || ""
+                    )
+                        .toLowerCase()
+                        .includes(keyword)
 
-                        ||
+                    ||
 
-                        (
-                            restaurant.description || ""
-                        )
-                            .toLowerCase()
-                            .includes(keyword)
+                    (
+                        restaurant.description || ""
+                    )
+                        .toLowerCase()
+                        .includes(keyword)
 
-                        ||
+                    ||
 
-                        JSON.stringify(
-                            restaurant.hours || ""
-                        )
-                            .toLowerCase()
-                            .includes(keyword)
+                    JSON.stringify(
+                        restaurant.hours || ""
+                    )
+                        .toLowerCase()
+                        .includes(keyword)
 
-                    );
+                );
 
-                }
-            );
-
-
-        renderRestaurants(
-            filtered
+            }
         );
 
-        clearSearchButton.hidden = keyword.length === 0;
 
-    }
+    renderRestaurants(
+        filtered
+    );
+
+
+    clearSearchButton.hidden =
+        keyword.length === 0;
+
+}
+
+
+/* ==================================================
+   Normal Text Search
+================================================== */
+
+searchInput.addEventListener(
+    "input",
+    performRestaurantSearch
 );
+
+
+/* ==================================================
+   Clear Search
+================================================== */
 
 clearSearchButton.addEventListener(
     "click",
     () => {
+
         searchInput.value = "";
+
         clearSearchButton.hidden = true;
+
         renderRestaurants();
+
         searchInput.focus();
+
     }
 );
+
+
+/* ==================================================
+   Voice Search
+================================================== */
+
+const voiceSearchButton =
+    document.getElementById(
+        "voiceSearchButton"
+    );
+
+const voiceSearchStatus =
+    document.getElementById(
+        "voiceSearchStatus"
+    );
+if (voiceSearchStatus) {
+    voiceSearchStatus.style.display = "none";
+}
+
+const voiceSearchStatusText =
+    document.getElementById(
+        "voiceSearchStatusText"
+    );
+
+
+let speechRecognition = null;
+
+let isVoiceListening = false;
+
+
+/* ==================================================
+   Browser Support
+================================================== */
+
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+
+if (SpeechRecognition) {
+
+    speechRecognition =
+        new SpeechRecognition();
+
+
+    speechRecognition.lang =
+        "zh-TW";
+
+
+    speechRecognition.continuous =
+        false;
+
+
+    speechRecognition.interimResults =
+        true;
+
+
+    speechRecognition.maxAlternatives =
+        1;
+
+
+    /* ==============================================
+       Start
+    ============================================== */
+
+    voiceSearchButton.addEventListener(
+        "click",
+        () => {
+
+            if (isVoiceListening) {
+
+                speechRecognition.stop();
+
+                return;
+
+            }
+
+
+            try {
+
+                speechRecognition.start();
+
+            } catch (error) {
+
+                console.warn(
+                    "語音辨識啟動失敗：",
+                    error
+                );
+
+            }
+
+        }
+    );
+
+
+    /* ==============================================
+       Listening Start
+    ============================================== */
+
+    speechRecognition.addEventListener(
+        "start",
+        () => {
+
+            isVoiceListening = true;
+
+
+            voiceSearchButton.classList.add(
+                "listening"
+            );
+
+
+            voiceSearchButton.setAttribute(
+                "aria-label",
+                "停止語音搜尋"
+            );
+
+
+            voiceSearchStatus.style.display = "flex";
+
+
+            voiceSearchStatusText.textContent =
+                "正在聆聽…";
+
+
+            searchInput.placeholder =
+                "請說出餐廳名稱、分類或地點…";
+
+        }
+    );
+
+
+    /* ==============================================
+       Result
+    ============================================== */
+
+    speechRecognition.addEventListener(
+        "result",
+        event => {
+
+            let transcript = "";
+
+
+            for (
+                let i = event.resultIndex;
+                i < event.results.length;
+                i++
+            ) {
+
+                transcript +=
+                    event.results[i][0].transcript;
+
+            }
+
+
+            transcript =
+                transcript.trim();
+
+
+            if (!transcript) {
+                return;
+            }
+
+
+            /*
+             * 即時顯示辨識文字
+             */
+            searchInput.value =
+                transcript;
+
+
+            /*
+             * 直接使用原本的搜尋系統
+             */
+            performRestaurantSearch();
+
+        }
+    );
+
+
+    /* ==============================================
+       End
+    ============================================== */
+
+speechRecognition.addEventListener(
+    "end",
+    () => {
+
+        isVoiceListening = false;
+
+        voiceSearchButton.classList.remove(
+            "listening"
+        );
+
+        voiceSearchButton.setAttribute(
+            "aria-label",
+            "語音搜尋"
+        );
+
+        voiceSearchStatus.style.display = "none";
+
+        searchInput.placeholder =
+            "搜尋餐廳、分類或地點...";
+
+    }
+);
+
+
+    /* ==============================================
+       Error
+    ============================================== */
+
+    speechRecognition.addEventListener(
+        "error",
+        event => {
+
+            console.warn(
+                "語音辨識錯誤：",
+                event.error
+            );
+
+
+            isVoiceListening = false;
+
+
+            voiceSearchButton.classList.remove(
+                "listening"
+            );
+
+
+            voiceSearchStatus.style.display = "flex";
+
+
+            switch (event.error) {
+
+                case "not-allowed":
+
+                    voiceSearchStatusText.textContent =
+                        "請允許麥克風權限";
+
+                    break;
+
+
+                case "no-speech":
+
+                    voiceSearchStatusText.textContent =
+                        "沒有聽到聲音，請再試一次";
+
+                    break;
+
+
+                case "audio-capture":
+
+                    voiceSearchStatusText.textContent =
+                        "無法使用麥克風";
+
+                    break;
+
+
+                case "network":
+
+                    voiceSearchStatusText.textContent =
+                        "語音辨識需要網路連線";
+
+                    break;
+
+
+                default:
+
+                    voiceSearchStatusText.textContent =
+                        "語音辨識失敗，請再試一次";
+
+            }
+
+
+            setTimeout(
+                () => {
+
+                    voiceSearchStatus.style.display = "none";
+
+                    searchInput.placeholder =
+                        "搜尋餐廳、分類或地點...";
+
+                },
+                2200
+            );
+
+        }
+    );
+
+} else {
+
+    /* ==============================================
+       Browser Not Supported
+    ============================================== */
+
+    voiceSearchButton.addEventListener(
+        "click",
+        () => {
+
+            voiceSearchStatus.style.display = "flex";
+
+
+            voiceSearchStatusText.textContent =
+                "目前的瀏覽器不支援語音搜尋";
+
+
+            setTimeout(
+                () => {
+
+                    voiceSearchStatus.style.display = "none";
+
+                },
+                2500
+            );
+
+        }
+    );
+
+}
 
 
 // ==================================================
