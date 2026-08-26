@@ -93,7 +93,7 @@ const supabaseClient =
 
 let restaurants = [];
 
-
+let randomPickerResultId = null;
 // ==================================================
 // 地區 / 餐廳群組 (Group = 資料隔離層，不是分類)
 // ==================================================
@@ -1442,7 +1442,7 @@ async function deleteRestaurantFromSupabase(
 
 function renderRestaurants(
     restaurantData = restaurants
-) {
+) {  
 
     restaurantList.innerHTML = "";
     applyDisplaySettings();
@@ -1469,17 +1469,25 @@ function renderRestaurants(
     }
 
 
-    visibleRestaurants.forEach(
-        restaurant => {
+visibleRestaurants.forEach(
+    restaurant => {
 
-            restaurantList.appendChild(
-                createRestaurantCard(
-                    restaurant
-                )
+        const card =
+            createRestaurantCard(
+                restaurant
             );
 
+        if (
+            randomPickerResultId &&
+            String(restaurant.id) === randomPickerResultId
+        ) {
+            card.classList.add("random-picker-selected");
         }
-    );
+
+        restaurantList.appendChild(card);
+
+    }
+);
 
 }
 
@@ -1600,7 +1608,7 @@ function createRestaurantCard(
 
     article.className =
         "restaurant-card";
-
+article.dataset.id = String(restaurant.id);
 
     const menuCount =
         restaurant.menuImages
@@ -2466,14 +2474,16 @@ categories.forEach(
                 // ==================================================
 
                 if (
-                    category === "全部"
-                ) {
+    category === "全部"
+) {
 
-                    renderRestaurants();
+    randomPickerResultId = null;
 
-                    return;
+    renderRestaurants();
 
-                }
+    return;
+
+}
 
 
                 // ==================================================
@@ -6042,8 +6052,97 @@ initializeGroupSwitching();
 initializeRestaurantImageUpload();
 initializeWeeklyHours();
 initializeMenuPreview();
-
+initializeRandomPicker();
 initializeMenuRemoveButtons();
+
+// ==================================================
+// Random Picker
+// ==================================================
+
+function initializeRandomPicker() {
+
+    const randomPickerButton =
+        document.getElementById("randomPickerButton");
+
+    if (!randomPickerButton) {
+        return;
+    }
+
+    randomPickerButton.addEventListener("click", () => {
+
+        const availableRestaurants =
+            getGroupFilteredRestaurants(restaurants);
+
+        if (availableRestaurants.length === 0) {
+            showToast("目前群組沒有餐廳可以抽籤", "info");
+            return;
+        }
+
+        const randomIndex =
+            Math.floor(
+                Math.random() * availableRestaurants.length
+            );
+
+      const selectedRestaurant =
+    availableRestaurants[randomIndex];
+
+console.log(
+    "🎲 隨機抽中的餐廳：",
+    selectedRestaurant
+);
+
+randomPickerResultId = String(selectedRestaurant.id);
+renderRestaurants();
+
+showToast(
+    `🎲 今天吃「${selectedRestaurant.name}」！`,
+    "success"
+);
+
+const selectedCard =
+    restaurantList.querySelector(
+        `[data-id="${CSS.escape(String(selectedRestaurant.id))}"]`
+    );
+
+selectedCard?.scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+});
+
+setTimeout(() => {
+
+    if (!selectedCard) {
+        return;
+    }
+
+    const winnerBadge =
+        document.createElement("div");
+
+    winnerBadge.className =
+        "random-picker-winner-badge";
+
+winnerBadge.textContent =
+    `今天吃 ${selectedRestaurant.name}`;
+
+    selectedCard.appendChild(
+        winnerBadge
+    );
+
+    setTimeout(() => {
+
+        selectedCard.classList.remove(
+            "random-picker-selected"
+        );
+
+        winnerBadge.remove();
+
+    }, 3000);
+
+}, 300);
+
+    });
+
+}
 
 if (
     "serviceWorker" in navigator

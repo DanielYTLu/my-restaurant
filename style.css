@@ -232,7 +232,15 @@ img {
     border-radius: 14px;
 
 }
+/* ==================================================
+   Search Action Buttons
+================================================== */
 
+.search-box > button {
+
+    flex-shrink: 0;
+
+}
 
 .search-icon {
 
@@ -428,6 +436,149 @@ img {
     color: #d94a4a;
 
 }
+
+/* ==================================================
+   Random Picker Selected
+================================================== */
+
+.restaurant-card.random-picker-selected {
+
+    position: relative;
+
+    z-index: 10;
+
+    border-color: #d4a017;
+
+    transform: scale(1.035);
+
+    box-shadow:
+        0 0 0 5px rgba(212, 160, 23, 0.20),
+        0 0 35px rgba(255, 193, 7, 0.45),
+        0 12px 35px rgba(0, 0, 0, 0.18);
+
+    animation:
+        randomPickerReveal 0.7s ease-in-out 3;
+
+}
+
+/* ==================================================
+   Random Picker Winner Badge
+================================================== */
+
+.random-picker-winner-badge {
+
+    position: absolute;
+
+    top: 50%;
+    left: 50%;
+
+    transform:
+        translate(-50%, -50%)
+        scale(0.7);
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding:
+        13px 24px;
+
+    border-radius: 999px;
+
+    background:
+        rgba(255, 255, 255, 0.96);
+
+    color: #8a6500;
+
+    font-size: 22px;
+
+    font-weight: 700;
+
+    letter-spacing: 1px;
+
+    white-space: nowrap;
+
+    box-shadow:
+        0 0 0 3px rgba(212, 160, 23, 0.25),
+        0 8px 28px rgba(0, 0, 0, 0.20);
+
+    backdrop-filter:
+        blur(8px);
+
+    pointer-events: none;
+
+    opacity: 0;
+
+    animation:
+        randomPickerBadgeIn
+        0.4s
+        ease-out
+        forwards;
+
+}
+
+
+/* Badge 出現 */
+
+@keyframes randomPickerBadgeIn {
+
+    from {
+
+        opacity: 0;
+
+        transform:
+            translate(-50%, -50%)
+            scale(0.7);
+
+    }
+
+    to {
+
+        opacity: 1;
+
+        transform:
+            translate(-50%, -50%)
+            scale(1);
+
+    }
+
+}
+
+
+
+
+/* ==================================================
+   Reveal Animation
+================================================== */
+
+@keyframes randomPickerReveal {
+
+    0%,
+    100% {
+
+        transform: scale(1.02);
+
+        box-shadow:
+            0 0 0 4px rgba(212, 160, 23, 0.16),
+            0 0 25px rgba(255, 193, 7, 0.30),
+            0 10px 28px rgba(0, 0, 0, 0.15);
+
+    }
+
+    50% {
+
+        transform: scale(1.06);
+
+        box-shadow:
+            0 0 0 8px rgba(212, 160, 23, 0.28),
+            0 0 55px rgba(255, 193, 7, 0.65),
+            0 16px 40px rgba(0, 0, 0, 0.22);
+
+    }
+
+}
+
 
 
 /* ==================================================
@@ -4404,4 +4555,59 @@ body.font-extra-large .card-actions button {
 
 html[data-theme="dark"] .group-delete-button:hover {
     background: rgba(248, 113, 113, 0.16);
+}
+
+/* ==================================================
+   Random Picker Button
+================================================== */
+
+.random-picker-button {
+
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex: 0 0 40px;
+
+    width: 40px;
+    height: 40px;
+
+    margin-right: 2px;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 50%;
+
+    background: transparent;
+    color: inherit;
+
+    font-size: 19px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    -webkit-tap-highlight-color: transparent;
+
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+
+.random-picker-button:hover {
+
+    background: rgba(0, 0, 0, 0.05) !important;
+
+    transform: scale(1.08) !important;
+
+}
+
+.random-picker-button:active {
+
+    transform: scale(0.92);
+
 }
