@@ -95,6 +95,18 @@ let restaurants = [];
 
 
 // ==================================================
+// 地區 / 餐廳群組 (Group = 資料隔離層，不是分類)
+// ==================================================
+
+let restaurantGroups = [];
+let currentGroupId = null;
+
+const UNCATEGORIZED_GROUP_NAME = "未分類";
+const GROUPS_STORAGE_KEY = "restaurantGroups";
+const CURRENT_GROUP_STORAGE_KEY = "currentGroupId";
+
+
+// ==================================================
 // Supabase Status
 // ==================================================
 
@@ -143,18 +155,38 @@ function loadDisplaySettings() {
     try {
         const saved = JSON.parse(localStorage.getItem("displaySettings"));
 
+        // ==================================================
+        // customOrder 需要支援「每個群組獨立排序」
+        // 格式：{ [groupId]: ["restaurantId", ...] }
+        //
+        // 舊版格式是單一陣列（尚未有群組概念），
+        // 先暫存在 "__legacy__"，等群組初始化完成後
+        // 由 ensureGroupsInitialized() 搬移到正確的群組。
+        // ==================================================
+
+        let customOrder = {};
+
+        if (Array.isArray(saved?.customOrder)) {
+            customOrder = { __legacy__: saved.customOrder.map(String) };
+        }
+        else if (saved?.customOrder && typeof saved.customOrder === "object") {
+            Object.entries(saved.customOrder).forEach(([groupId, ids]) => {
+                if (Array.isArray(ids)) {
+                    customOrder[groupId] = ids.map(String);
+                }
+            });
+        }
+
         return {
             fontSize: ["extra-small", "small", "medium", "large", "extra-large"].includes(saved?.fontSize)
                 ? saved.fontSize
                 : "medium",
             viewMode: saved?.viewMode === "list" ? "list" : "card",
-            customOrder: Array.isArray(saved?.customOrder)
-                ? saved.customOrder.map(String)
-                : []
+            customOrder
         };
     }
     catch {
-        return { fontSize: "medium", viewMode: "card", customOrder: [] };
+        return { fontSize: "medium", viewMode: "card", customOrder: {} };
     }
 }
 
@@ -180,8 +212,9 @@ function showToast(message, type = "info") {
 }
 
 function getOrderedRestaurants(source = restaurants) {
+    const orderForGroup = displaySettings.customOrder[currentGroupId] || [];
     const available = new Map(source.map(restaurant => [String(restaurant.id), restaurant]));
-    const ordered = displaySettings.customOrder
+    const ordered = orderForGroup
         .map(id => available.get(String(id)))
         .filter(Boolean);
     const orderedIds = new Set(ordered.map(restaurant => String(restaurant.id)));
@@ -357,6 +390,240 @@ function getWeeklyHoursText(restaurant) {
 
 
 // ==================================================
+// 地區 / 餐廳群組管理
+// 群組 = 資料隔離層（不是分類、不是標籤）
+// ==================================================
+
+function generateGroupId() {
+    return "group-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+}
+
+function saveGroupsLocal() {
+    localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(restaurantGroups));
+    localStorage.setItem(CURRENT_GROUP_STORAGE_KEY, currentGroupId || "");
+}
+
+function loadGroupsFromLocal() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(GROUPS_STORAGE_KEY) || "[]");
+
+        restaurantGroups = Array.isArray(saved)
+            ? saved
+                .filter(group => group && group.id && group.name)
+                .map(group => ({
+                    id: String(group.id),
+                    name: String(group.name),
+                    created_at: group.created_at || null
+                }))
+            : [];
+    }
+    catch {
+        restaurantGroups = [];
+    }
+
+    currentGroupId = localStorage.getItem(CURRENT_GROUP_STORAGE_KEY) || null;
+}
+
+function getUncategorizedGroupId() {
+    let group = restaurantGroups.find(
+        candidate => candidate.name === UNCATEGORIZED_GROUP_NAME
+    );
+
+    if (!group) {
+        group = {
+            id: generateGroupId(),
+            name: UNCATEGORIZED_GROUP_NAME,
+            created_at: new Date().toISOString()
+        };
+
+        restaurantGroups.push(group);
+        saveGroupsLocal();
+
+        // 嘗試同步到 Supabase；若資料表尚未建立則安靜失敗，不影響本機使用
+        createGroupInSupabase(group);
+    }
+
+    return group.id;
+}
+
+function ensureGroupsInitialized() {
+    if (restaurantGroups.length === 0) {
+        getUncategorizedGroupId();
+    }
+
+    const validIds = new Set(restaurantGroups.map(group => group.id));
+
+    if (!currentGroupId || !validIds.has(currentGroupId)) {
+        currentGroupId = restaurantGroups[0].id;
+    }
+
+    // ==================================================
+    // 舊版 customOrder（單一群組排序）搬移到「未分類」
+    // ==================================================
+
+    if (displaySettings.customOrder.__legacy__) {
+        const legacyOrder = displaySettings.customOrder.__legacy__;
+        delete displaySettings.customOrder.__legacy__;
+
+        const targetGroupId = getUncategorizedGroupId();
+
+        displaySettings.customOrder[targetGroupId] =
+            (displaySettings.customOrder[targetGroupId] || []).concat(legacyOrder);
+
+        saveDisplaySettings();
+    }
+
+    saveGroupsLocal();
+}
+
+function assignMissingGroupIds() {
+    let changed = false;
+
+    restaurants.forEach(restaurant => {
+        if (!restaurant.groupId) {
+            restaurant.groupId = getUncategorizedGroupId();
+            changed = true;
+        }
+    });
+
+    if (changed) {
+        saveRestaurantsLocal();
+    }
+}
+
+function getGroupFilteredRestaurants(source = restaurants) {
+    if (!currentGroupId) {
+        return source;
+    }
+
+    return source.filter(
+        restaurant => (restaurant.groupId || getUncategorizedGroupId()) === currentGroupId
+    );
+}
+
+function getCurrentGroupName() {
+    const group = restaurantGroups.find(candidate => candidate.id === currentGroupId);
+    return group?.name || UNCATEGORIZED_GROUP_NAME;
+}
+
+function updateGroupSwitchButton() {
+    const label = document.getElementById("groupSwitchLabel");
+
+    if (label) {
+        label.textContent = getCurrentGroupName();
+    }
+}
+
+
+// --------------------------------------------------
+// Supabase：restaurant_groups
+// 若資料表 / 欄位尚未建立，會安靜地退回本機資料，
+// 不影響其餘既有功能。
+// --------------------------------------------------
+
+function isMissingGroupTableOrColumnError(error) {
+    if (!error) {
+        return false;
+    }
+
+    const message = (error.message || "").toLowerCase();
+    const code = error.code || "";
+
+    return (
+        code === "42703" || // column does not exist
+        code === "42P01" || // relation does not exist
+        message.includes("group_id") ||
+        message.includes("restaurant_groups")
+    );
+}
+
+async function loadGroupsFromSupabase() {
+    try {
+        const { data, error } = await supabaseClient
+            .from("restaurant_groups")
+            .select("*")
+            .order("created_at", { ascending: true });
+
+        if (error) {
+            if (!isMissingGroupTableOrColumnError(error)) {
+                console.error("❌ 群組讀取失敗：", error);
+            }
+            else {
+                console.warn("⚠️ Supabase 尚未建立 restaurant_groups 資料表，改用本機群組資料。");
+            }
+
+            return false;
+        }
+
+        if (Array.isArray(data) && data.length > 0) {
+            restaurantGroups = data.map(row => ({
+                id: String(row.id),
+                name: row.name || UNCATEGORIZED_GROUP_NAME,
+                created_at: row.created_at || null
+            }));
+
+            saveGroupsLocal();
+        }
+
+        return true;
+    }
+    catch (error) {
+        console.error("❌ 群組連線失敗：", error);
+        return false;
+    }
+}
+
+async function createGroupInSupabase(group) {
+    try {
+        const { error } = await supabaseClient
+            .from("restaurant_groups")
+            .insert({
+                id: group.id,
+                name: group.name,
+                created_at: group.created_at || new Date().toISOString()
+            });
+
+        if (error) {
+            if (!isMissingGroupTableOrColumnError(error)) {
+                console.error("❌ 群組新增至 Supabase 失敗：", error);
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+    catch (error) {
+        console.error("❌ 群組新增錯誤：", error);
+        return false;
+    }
+}
+
+async function renameGroupInSupabase(id, name) {
+    try {
+        const { error } = await supabaseClient
+            .from("restaurant_groups")
+            .update({ name })
+            .eq("id", id);
+
+        if (error) {
+            if (!isMissingGroupTableOrColumnError(error)) {
+                console.error("❌ 群組更新至 Supabase 失敗：", error);
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+    catch (error) {
+        console.error("❌ 群組更新錯誤：", error);
+        return false;
+    }
+}
+
+
+// ==================================================
 // Initialize
 // ==================================================
 
@@ -366,6 +633,22 @@ initialize();
 async function initialize() {
 
     console.log("🚀 餐廳管理系統啟動");
+
+    // ==================================================
+    // 先載入群組（地區隔離層）
+    // ==================================================
+
+    loadGroupsFromLocal();
+
+    try {
+        await loadGroupsFromSupabase();
+    }
+    catch (error) {
+        console.error("❌ 群組載入錯誤：", error);
+    }
+
+    ensureGroupsInitialized();
+    updateGroupSwitchButton();
 
     // 從 Supabase 載入餐廳
     showSkeletonLoading();
@@ -403,6 +686,7 @@ function loadRestaurantsFromLocal() {
         restaurants = [];
     }
 
+    assignMissingGroupIds();
     cleanDisplayOrder();
     renderRestaurants();
 }
@@ -706,7 +990,17 @@ function mapSupabaseToRestaurant(
         // ==================================================
 
         favorite:
-            row.favorite === true
+            row.favorite === true,
+
+
+        // ==================================================
+        // 📍 群組（地區）
+        // ==================================================
+
+        groupId:
+            row.group_id
+                ? String(row.group_id)
+                : null
 
     };
 
@@ -825,7 +1119,15 @@ function mapRestaurantToSupabase(
                 restaurant.menuImages
             )
                 ? restaurant.menuImages
-                : []
+                : [],
+
+
+        // ==================================================
+        // 📍 群組（地區）
+        // ==================================================
+
+        group_id:
+            restaurant.groupId || null
 
     };
 
@@ -850,9 +1152,13 @@ function cleanDisplayOrder() {
         restaurants.map(restaurant => String(restaurant.id))
     );
 
-    displaySettings.customOrder = displaySettings.customOrder.filter(
-        id => existingIds.has(String(id))
-    );
+    Object.keys(displaySettings.customOrder).forEach(groupId => {
+        displaySettings.customOrder[groupId] =
+            (displaySettings.customOrder[groupId] || []).filter(
+                id => existingIds.has(String(id))
+            );
+    });
+
     saveDisplaySettings();
 
 }
@@ -886,7 +1192,7 @@ async function createRestaurantInSupabase(
             );
 
 
-        const {
+        let {
             data,
             error
         } =
@@ -897,6 +1203,32 @@ async function createRestaurantInSupabase(
                 )
                 .select()
                 .single();
+
+
+        // ==================================================
+        // Supabase 尚未新增 group_id 欄位時，
+        // 自動退回不含群組欄位的寫入方式，避免整個新增失敗。
+        // ==================================================
+
+        if (
+            error &&
+            isMissingGroupTableOrColumnError(error)
+        ) {
+
+            console.warn(
+                "⚠️ Supabase 的 restaurants 資料表尚未有 group_id 欄位，先以不含群組的方式新增。請至 Supabase 執行資料庫更新。"
+            );
+
+            const { group_id, ...fallbackPayload } = payload;
+
+            ({ data, error } =
+                await supabaseClient
+                    .from("restaurants")
+                    .insert(fallbackPayload)
+                    .select()
+                    .single());
+
+        }
 
 
         if (
@@ -958,7 +1290,7 @@ async function updateRestaurantInSupabase(
             );
 
 
-        const {
+        let {
             data,
             error
         } =
@@ -973,6 +1305,33 @@ async function updateRestaurantInSupabase(
                 )
                 .select()
                 .single();
+
+
+        // ==================================================
+        // Supabase 尚未新增 group_id 欄位時，
+        // 自動退回不含群組欄位的更新方式，避免整個更新失敗。
+        // ==================================================
+
+        if (
+            error &&
+            isMissingGroupTableOrColumnError(error)
+        ) {
+
+            console.warn(
+                "⚠️ Supabase 的 restaurants 資料表尚未有 group_id 欄位，先以不含群組的方式更新。請至 Supabase 執行資料庫更新。"
+            );
+
+            const { group_id, ...fallbackPayload } = payload;
+
+            ({ data, error } =
+                await supabaseClient
+                    .from("restaurants")
+                    .update(fallbackPayload)
+                    .eq("id", id)
+                    .select()
+                    .single());
+
+        }
 
 
         if (
@@ -1088,7 +1447,15 @@ function renderRestaurants(
     restaurantList.innerHTML = "";
     applyDisplaySettings();
 
-    const visibleRestaurants = getOrderedRestaurants(restaurantData);
+    // ==================================================
+    // 先套用「目前群組」過濾，再依原本順序排序
+    // 無論傳入的是全部餐廳、搜尋結果、分類結果或收藏結果，
+    // 最終畫面一律只顯示目前群組的餐廳。
+    // ==================================================
+
+    const groupScopedRestaurants = getGroupFilteredRestaurants(restaurantData);
+
+    const visibleRestaurants = getOrderedRestaurants(groupScopedRestaurants);
 
 
     if (
@@ -2173,6 +2540,12 @@ addRestaurantButton.addEventListener(
         updateRestaurantImagePreview("");
         renderWeeklyHoursEditor();
 
+        // 新增餐廳不需要選擇群組，自動使用目前群組
+        const restaurantGroupField = document.getElementById("restaurantGroupField");
+        if (restaurantGroupField) {
+            restaurantGroupField.hidden = true;
+        }
+
         document.querySelectorAll("[id^='restaurantMenu']").forEach(input => {
             input.dataset.menuRemoved = "false";
         });
@@ -2247,6 +2620,11 @@ function closeRestaurantModal() {
 
 
     delete restaurantForm.dataset.editingId;
+
+    const restaurantGroupFieldOnClose = document.getElementById("restaurantGroupField");
+    if (restaurantGroupFieldOnClose) {
+        restaurantGroupFieldOnClose.hidden = true;
+    }
 
 
     updateMenuPreview(
@@ -2507,6 +2885,23 @@ console.log(
                 document.getElementById(
                     "restaurantCategory"
                 ).value,
+
+
+            // ==================================================
+            // 📍 群組（地區）
+            // 新增：自動使用目前群組
+            // 編輯：使用「所屬群組」下拉選單的值
+            // ==================================================
+
+            groupId:
+                editingId
+                    ? (
+                        document.getElementById("restaurantGroup")?.value ||
+                        existingRestaurant?.groupId ||
+                        currentGroupId
+                    )
+                    : currentGroupId,
+
 
             rating:
                 Number(
@@ -3237,6 +3632,30 @@ function openEditRestaurant(
         "restaurantCategory"
     ).value =
         restaurant.category || "";
+
+
+    // ==================================================
+    // 所屬群組（編輯時才顯示，可移動到其他群組）
+    // ==================================================
+
+    const restaurantGroupField =
+        document.getElementById("restaurantGroupField");
+
+    const restaurantGroupSelect =
+        document.getElementById("restaurantGroup");
+
+    if (restaurantGroupField && restaurantGroupSelect) {
+
+        restaurantGroupSelect.innerHTML = restaurantGroups
+            .map(group => `<option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}</option>`)
+            .join("");
+
+        restaurantGroupSelect.value =
+            restaurant.groupId || currentGroupId;
+
+        restaurantGroupField.hidden = false;
+
+    }
 
 
     document.getElementById(
@@ -5619,6 +6038,7 @@ function openFullscreenMenuImage(
 
 initializeTheme();
 initializeDisplaySettings();
+initializeGroupSwitching();
 initializeRestaurantImageUpload();
 initializeWeeklyHours();
 initializeMenuPreview();
@@ -5865,7 +6285,17 @@ async function loadRestaurants() {
                 // ------------------------------------------
 
                 favorite:
-                    restaurant.favorite === true
+                    restaurant.favorite === true,
+
+
+                // ------------------------------------------
+                // 📍 群組（地區）
+                // ------------------------------------------
+
+                groupId:
+                    restaurant.group_id
+                        ? String(restaurant.group_id)
+                        : null
 
             })
         );
@@ -5875,6 +6305,14 @@ async function loadRestaurants() {
         "✅ 轉換後的網站餐廳資料：",
         restaurants
     );
+
+
+    // ==================================================
+    // 舊資料沒有 groupId 時，自動歸入「未分類」
+    // ==================================================
+
+    assignMissingGroupIds();
+    cleanDisplayOrder();
 
 
     // ==================================================
@@ -5941,7 +6379,7 @@ function initializeDisplaySettings() {
     document.getElementById("finishOrderButton").addEventListener("click", () => {
         const orderList = document.getElementById("orderList");
 
-        displaySettings.customOrder = [...orderList.querySelectorAll("[data-order-id]")]
+        displaySettings.customOrder[currentGroupId] = [...orderList.querySelectorAll("[data-order-id]")]
             .map(item => item.dataset.orderId);
         saveDisplaySettings();
         orderSettingsModal.classList.remove("show");
@@ -5968,9 +6406,600 @@ function updateDisplaySettingsControls() {
     });
 }
 
+
+// ==================================================
+// 群組切換 / 新增群組 / 修改群組名稱
+// ==================================================
+
+function initializeGroupSwitching() {
+    const groupSwitchButton = document.getElementById("groupSwitchButton");
+    const groupSheetModal = document.getElementById("groupSheetModal");
+    const closeGroupSheet = document.getElementById("closeGroupSheet");
+    const addGroupButton = document.getElementById("addGroupButton");
+
+    const groupFormModal = document.getElementById("groupFormModal");
+    const closeGroupFormModal = document.getElementById("closeGroupFormModal");
+    const cancelGroupFormButton = document.getElementById("cancelGroupFormButton");
+    const groupForm = document.getElementById("groupForm");
+    const groupNameInput = document.getElementById("groupNameInput");
+    const groupFormTitle = document.getElementById("groupFormTitle");
+    const submitGroupFormButton = document.getElementById("submitGroupFormButton");
+
+    if (!groupSwitchButton || !groupSheetModal || !groupFormModal || !groupForm) {
+        return;
+    }
+
+    function closeGroupFormModalHandler() {
+        groupFormModal.classList.remove("show");
+        groupForm.reset();
+        delete groupForm.dataset.editingGroupId;
+    }
+
+    // --------------------------------------------------
+    // 開啟 / 關閉「選擇地區」Bottom Sheet
+    // --------------------------------------------------
+
+    groupSwitchButton.addEventListener("click", () => {
+        renderGroupList();
+        groupSheetModal.classList.add("show");
+    });
+
+    closeGroupSheet?.addEventListener("click", () => {
+        groupSheetModal.classList.remove("show");
+    });
+
+    groupSheetModal.addEventListener("click", event => {
+        if (event.target === groupSheetModal) {
+            groupSheetModal.classList.remove("show");
+        }
+    });
+
+    // --------------------------------------------------
+    // 開啟「新增群組」Modal
+    // --------------------------------------------------
+
+    addGroupButton?.addEventListener("click", () => {
+        delete groupForm.dataset.editingGroupId;
+        groupFormTitle.textContent = "新增群組";
+        submitGroupFormButton.textContent = "建立";
+        groupNameInput.value = "";
+        groupSheetModal.classList.remove("show");
+        groupFormModal.classList.add("show");
+        groupNameInput.focus();
+    });
+
+    closeGroupFormModal?.addEventListener("click", closeGroupFormModalHandler);
+    cancelGroupFormButton?.addEventListener("click", closeGroupFormModalHandler);
+
+    groupFormModal.addEventListener("click", event => {
+        if (event.target === groupFormModal) {
+            closeGroupFormModalHandler();
+        }
+    });
+
+    // --------------------------------------------------
+    // 送出「新增群組 / 修改群組名稱」表單
+    // --------------------------------------------------
+
+    groupForm.addEventListener("submit", event => {
+        event.preventDefault();
+
+        const name = groupNameInput.value.trim();
+
+        if (!name) {
+            return;
+        }
+
+        const editingGroupId = groupForm.dataset.editingGroupId;
+
+        if (editingGroupId) {
+
+            // 修改群組名稱（id 保持不變）
+            const group = restaurantGroups.find(candidate => candidate.id === editingGroupId);
+
+            if (group) {
+                group.name = name;
+                saveGroupsLocal();
+                renameGroupInSupabase(editingGroupId, name);
+            }
+
+            showToast("✅ 群組名稱已更新", "success");
+
+        }
+        else {
+
+            // 新增群組並自動切換過去
+            const newGroup = {
+                id: generateGroupId(),
+                name,
+                created_at: new Date().toISOString()
+            };
+
+            restaurantGroups.push(newGroup);
+            currentGroupId = newGroup.id;
+            saveGroupsLocal();
+            createGroupInSupabase(newGroup);
+
+            showToast(`✅ 已建立並切換到「${name}」`, "success");
+
+        }
+
+        closeGroupFormModalHandler();
+        updateGroupSwitchButton();
+        renderRestaurants();
+
+    });
+
+}
+
+function renderGroupList() {
+    const groupList = document.getElementById("groupList");
+
+    if (!groupList) {
+        return;
+    }
+
+    groupList.innerHTML = restaurantGroups.map(group => {
+
+        const isUncategorized =
+            group.name === UNCATEGORIZED_GROUP_NAME;
+
+        return `
+            <div
+                class="group-list-item ${group.id === currentGroupId ? "active" : ""}"
+                data-group-id="${escapeHtml(group.id)}"
+            >
+
+                <span class="group-list-check">
+                    ${group.id === currentGroupId ? "✓" : ""}
+                </span>
+
+                <button
+                    type="button"
+                    class="group-list-name"
+                    data-select-group-id="${escapeHtml(group.id)}"
+                >
+                    ${escapeHtml(group.name)}
+                </button>
+
+                <button
+                    type="button"
+                    class="group-rename-button"
+                    data-rename-group-id="${escapeHtml(group.id)}"
+                    aria-label="修改群組名稱"
+                >
+                    ✎
+                </button>
+
+                ${
+                    !isUncategorized
+                        ? `
+                            <button
+                                type="button"
+                                class="group-delete-button"
+                                data-delete-group-id="${escapeHtml(group.id)}"
+                                aria-label="刪除群組"
+                            >
+                                🗑️
+                            </button>
+                        `
+                        : ""
+                }
+
+            </div>
+        `;
+    }).join("");
+
+
+    // ==================================================
+    // 切換群組
+    // ==================================================
+
+    groupList
+        .querySelectorAll("[data-select-group-id]")
+        .forEach(button => {
+
+            button.addEventListener("click", () => {
+
+                switchGroup(
+                    button.dataset.selectGroupId
+                );
+
+            });
+
+        });
+
+
+    // ==================================================
+    // 修改群組名稱
+    // ==================================================
+
+    groupList
+        .querySelectorAll("[data-rename-group-id]")
+        .forEach(button => {
+
+            button.addEventListener("click", () => {
+
+                openRenameGroupModal(
+                    button.dataset.renameGroupId
+                );
+
+            });
+
+        });
+
+
+    // ==================================================
+    // 刪除群組
+    // ==================================================
+
+    groupList
+        .querySelectorAll("[data-delete-group-id]")
+        .forEach(button => {
+
+            button.addEventListener("click", () => {
+
+                deleteGroup(
+                    button.dataset.deleteGroupId
+                );
+
+            });
+
+        });
+
+}
+function switchGroup(groupId) {
+    const groupSheetModal = document.getElementById("groupSheetModal");
+
+    if (!groupId || groupId === currentGroupId) {
+        groupSheetModal?.classList.remove("show");
+        return;
+    }
+
+    currentGroupId = groupId;
+    saveGroupsLocal();
+
+    groupSheetModal?.classList.remove("show");
+
+    // ==================================================
+    // 切換群組後清除搜尋，並回到「全部」分類，
+    // 確保畫面只顯示該群組的餐廳。
+    // ==================================================
+
+    searchInput.value = "";
+    clearSearchButton.hidden = true;
+
+    document.querySelectorAll(".category").forEach(button => {
+        button.classList.toggle("active", button.dataset.category === "全部");
+    });
+
+    updateGroupSwitchButton();
+    renderRestaurants();
+}
+
+function openRenameGroupModal(groupId) {
+    const group = restaurantGroups.find(candidate => candidate.id === groupId);
+
+    if (!group) {
+        return;
+    }
+
+    const groupForm = document.getElementById("groupForm");
+    const groupNameInput = document.getElementById("groupNameInput");
+    const groupFormTitle = document.getElementById("groupFormTitle");
+    const submitGroupFormButton = document.getElementById("submitGroupFormButton");
+    const groupSheetModal = document.getElementById("groupSheetModal");
+    const groupFormModal = document.getElementById("groupFormModal");
+
+    groupForm.dataset.editingGroupId = groupId;
+    groupFormTitle.textContent = "修改群組名稱";
+    submitGroupFormButton.textContent = "儲存";
+    groupNameInput.value = group.name;
+
+    groupSheetModal?.classList.remove("show");
+    groupFormModal?.classList.add("show");
+    groupNameInput.focus();
+}
+
+
+// ==================================================
+// 刪除群組
+// ==================================================
+// 安全規則：
+// 1. 「未分類」不可刪除
+// 2. 群組內的餐廳不刪除
+// 3. 群組內餐廳全部移到「未分類」
+// 4. 如果刪除的是目前群組，自動切換到「未分類」
+// 5. LocalStorage 與 Supabase 都同步
+// ==================================================
+
+async function deleteGroup(groupId) {
+
+    const group =
+        restaurantGroups.find(
+            candidate =>
+                String(candidate.id) === String(groupId)
+        );
+
+    // --------------------------------------------------
+    // 找不到群組
+    // --------------------------------------------------
+
+    if (!group) {
+
+        alert("找不到要刪除的群組。");
+
+        return;
+    }
+
+
+    // --------------------------------------------------
+    // 「未分類」禁止刪除
+    // --------------------------------------------------
+
+    if (
+        group.name === UNCATEGORIZED_GROUP_NAME
+    ) {
+
+        alert("「未分類」群組不能刪除。");
+
+        return;
+    }
+
+
+    // --------------------------------------------------
+    // 確認刪除
+    // --------------------------------------------------
+
+    const restaurantCount =
+        restaurants.filter(
+            restaurant =>
+                String(restaurant.groupId) ===
+                String(groupId)
+        ).length;
+
+
+    const message =
+        restaurantCount > 0
+            ? `確定要刪除「${group.name}」嗎？\n\n此群組中的 ${restaurantCount} 間餐廳不會被刪除，而是會全部移到「未分類」。`
+            : `確定要刪除「${group.name}」嗎？`;
+
+
+    const confirmed =
+        confirm(message);
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    // ==================================================
+    // 找到「未分類」群組
+    // ==================================================
+
+    const uncategorizedGroupId =
+        getUncategorizedGroupId();
+
+
+    // ==================================================
+    // 把群組內餐廳移到「未分類」
+    // ==================================================
+
+    const restaurantsToMove =
+        restaurants.filter(
+            restaurant =>
+                String(restaurant.groupId) ===
+                String(groupId)
+        );
+
+
+    for (
+        const restaurant
+        of restaurantsToMove
+    ) {
+
+        restaurant.groupId =
+            uncategorizedGroupId;
+
+        // ----------------------------------------------
+        // Supabase 更新餐廳群組
+        // ----------------------------------------------
+
+        if (
+            supabaseConnected
+        ) {
+
+            try {
+
+                const payload =
+                    mapRestaurantToSupabase(
+                        restaurant
+                    );
+
+
+                const {
+                    error
+                } =
+                    await supabaseClient
+                        .from("restaurants")
+                        .update({
+                            group_id:
+                                uncategorizedGroupId
+                        })
+                        .eq(
+                            "id",
+                            restaurant.id
+                        );
+
+
+                if (error) {
+
+                    console.error(
+                        "❌ 餐廳移動到未分類失敗：",
+                        error
+                    );
+
+                    alert(
+                        `「${restaurant.name}」移動到未分類失敗，群組未刪除。`
+                    );
+
+                    return;
+                }
+
+            }
+            catch (error) {
+
+                console.error(
+                    "❌ 餐廳群組更新錯誤：",
+                    error
+                );
+
+                alert(
+                    `「${restaurant.name}」移動到未分類失敗，群組未刪除。`
+                );
+
+                return;
+            }
+
+        }
+
+    }
+
+
+    // ==================================================
+    // Supabase：刪除群組
+    // ==================================================
+
+    if (
+        supabaseConnected
+    ) {
+
+        try {
+
+            const {
+                error
+            } =
+                await supabaseClient
+                    .from("restaurant_groups")
+                    .delete()
+                    .eq(
+                        "id",
+                        groupId
+                    );
+
+
+            if (error) {
+
+                console.error(
+                    "❌ Supabase 群組刪除失敗：",
+                    error
+                );
+
+                alert(
+                    "❌ 群組刪除失敗，請檢查網路連線。"
+                );
+
+                return;
+            }
+
+        }
+        catch (error) {
+
+            console.error(
+                "❌ 群組刪除錯誤：",
+                error
+            );
+
+            alert(
+                "❌ 群組刪除失敗。"
+            );
+
+            return;
+        }
+
+    }
+
+
+    // ==================================================
+    // 從本機 restaurantGroups 移除
+    // ==================================================
+
+    restaurantGroups =
+        restaurantGroups.filter(
+            candidate =>
+                String(candidate.id) !==
+                String(groupId)
+        );
+
+
+    // ==================================================
+    // 如果刪除的是目前群組
+    // 自動切換到「未分類」
+    // ==================================================
+
+    if (
+        String(currentGroupId) ===
+        String(groupId)
+    ) {
+
+        currentGroupId =
+            uncategorizedGroupId;
+
+    }
+
+
+    // ==================================================
+    // 清理已刪除群組的 customOrder
+    // ==================================================
+
+    if (
+        displaySettings.customOrder &&
+        typeof displaySettings.customOrder === "object"
+    ) {
+
+        delete displaySettings.customOrder[groupId];
+
+        saveDisplaySettings();
+
+    }
+
+
+    // ==================================================
+    // 儲存群組狀態
+    // ==================================================
+
+    saveGroupsLocal();
+
+
+    // ==================================================
+    // 儲存餐廳
+    // ==================================================
+
+    saveRestaurantsLocal();
+
+
+    // ==================================================
+    // 更新 UI
+    // ==================================================
+
+    updateGroupSwitchButton();
+
+    renderGroupList();
+
+    renderRestaurants();
+
+
+    showToast(
+        `✅ 「${group.name}」已刪除，餐廳已移至「未分類」。`,
+        "success"
+    );
+
+}
+
 function renderOrderEditor() {
     const orderList = document.getElementById("orderList");
-    const orderedRestaurants = getOrderedRestaurants(restaurants);
+    const orderedRestaurants = getOrderedRestaurants(getGroupFilteredRestaurants(restaurants));
 
     orderList.innerHTML = orderedRestaurants.map((restaurant, index) => `
         <div class="order-item" draggable="true" data-order-id="${restaurant.id}">

@@ -117,6 +117,48 @@ img {
     transform: scale(0.96);
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.group-switch-button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 42px;
+    max-width: 148px;
+    padding: 0 13px;
+    border: 1px solid #e1e1dc;
+    border-radius: 21px;
+    background: white;
+    color: #333;
+    font-size: 13px;
+    font-weight: 600;
+    transition: transform var(--motion-fast), background-color var(--motion-fast), color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.group-switch-button:active {
+    transform: scale(0.96);
+}
+
+.group-switch-icon {
+    font-size: 13px;
+}
+
+.group-switch-label {
+    overflow: hidden;
+    max-width: 84px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.group-switch-caret {
+    font-size: 10px;
+    color: #999;
+}
+
 
 .eyebrow {
 
@@ -545,6 +587,29 @@ img {
 
     box-shadow:
         0 8px 25px rgba(0,0,0,0.18);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+}
+
+
+/* + 號 */
+
+.floating-add-button span {
+
+    display: block;
+
+    font-size: 27px;
+
+    font-weight: 400;
+
+    line-height: 1;
+
+    transform: translateY(-1px);
 
 }
 
@@ -2359,6 +2424,81 @@ img {
     font-size: 13px;
 }
 
+.group-list {
+    margin-bottom: 14px;
+}
+
+.group-list-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 50px;
+    padding: 0 14px;
+    margin-bottom: 8px;
+    border: 1px solid #e1e1dc;
+    border-radius: 12px;
+    background: white;
+    color: #333;
+    font-size: 14px;
+}
+
+.group-list-item.active {
+    border-color: #202020;
+}
+
+.group-list-check {
+    width: 16px;
+    flex-shrink: 0;
+    color: #202020;
+    font-weight: 700;
+}
+
+.group-list-name {
+    flex: 1;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    padding: 14px 0;
+}
+
+.group-rename-button {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: #f2f2ed;
+    color: #666;
+    font-size: 13px;
+}
+
+.group-form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.group-form-cancel-button {
+    flex: 1;
+    height: 48px;
+    border: 1px solid #deded9;
+    border-radius: 12px;
+    background: white;
+    color: #555;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.group-form-submit-button.form-submit-button {
+    flex: 1;
+    margin-top: 0;
+}
+
 .order-list {
     padding: 14px 20px 24px;
 }
@@ -2913,10 +3053,25 @@ body.font-extra-large .card-actions button {
 [data-theme="dark"] .empty-state-button,
 [data-theme="dark"] .settings-segmented button,
 [data-theme="dark"] .settings-row-button,
-[data-theme="dark"] .order-item {
+[data-theme="dark"] .order-item,
+[data-theme="dark"] .group-list-item,
+[data-theme="dark"] .group-form-cancel-button {
     background: var(--dark-card);
     border-color: var(--dark-border);
     color: var(--dark-text);
+}
+
+[data-theme="dark"] .group-list-item.active {
+    border-color: #f2f2ed;
+}
+
+[data-theme="dark"] .group-rename-button {
+    background: var(--dark-elevated);
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .group-switch-caret {
+    color: var(--dark-muted);
 }
 
 [data-theme="dark"] .search-box input,
@@ -2956,7 +3111,8 @@ body.font-extra-large .card-actions button {
 }
 
 [data-theme="dark"] .display-settings-button,
-[data-theme="dark"] .view-button {
+[data-theme="dark"] .view-button,
+[data-theme="dark"] .group-switch-button {
     background: var(--dark-card);
     border-color: var(--dark-border);
     color: var(--dark-secondary);
@@ -3705,4 +3861,547 @@ body.font-extra-large .card-actions button {
 
 .restaurant-image-placeholder[hidden] {
     display: none !important;
+}
+
+/* ==================================================
+   Global Loading
+================================================== */
+
+.app-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 24px;
+
+    background: rgba(0, 0, 0, 0.22);
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    transition:
+        opacity 0.2s ease,
+        visibility 0.2s ease;
+
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+
+
+.app-loading.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+
+.app-loading-card {
+    width: min(260px, calc(100vw - 48px));
+
+    padding: 24px 20px 22px;
+
+    text-align: center;
+
+    background: var(--card-bg, #ffffff);
+
+    border: 1px solid var(--border-color, #e8e8e4);
+
+    border-radius: 24px;
+
+    box-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.12);
+
+    transform: scale(0.94) translateY(6px);
+
+    transition:
+        transform 0.25s ease;
+}
+
+
+.app-loading.is-visible .app-loading-card {
+    transform: scale(1) translateY(0);
+}
+
+
+/* 可愛的小餐盤 */
+
+.app-loading-icon {
+    width: 52px;
+    height: 52px;
+
+    margin: 0 auto 12px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 28px;
+
+    background: var(--surface-color, #f7f7f5);
+
+    border-radius: 50%;
+
+    animation: loading-bounce 1.2s ease-in-out infinite;
+}
+
+
+/* 標題 */
+
+.app-loading-title {
+    margin-bottom: 5px;
+
+    font-size: 16px;
+    font-weight: 700;
+
+    color: var(--text-color, #222222);
+}
+
+
+/* 說明 */
+
+.app-loading-text {
+    font-size: 13px;
+    line-height: 1.5;
+
+    color: var(--muted-text, #888888);
+}
+
+
+/* 三個小圓點 */
+
+.app-loading-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 5px;
+
+    margin-top: 14px;
+}
+
+
+.app-loading-dots span {
+    width: 5px;
+    height: 5px;
+
+    border-radius: 50%;
+
+    background: currentColor;
+
+    color: var(--accent-color, #777777);
+
+    animation: loading-dot 1.2s ease-in-out infinite;
+}
+
+
+.app-loading-dots span:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+
+.app-loading-dots span:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+
+/* ==================================================
+   Loading Animation
+================================================== */
+
+@keyframes loading-bounce {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-5px) rotate(-5deg);
+    }
+
+}
+
+
+@keyframes loading-dot {
+
+    0%,
+    100% {
+        opacity: 0.25;
+        transform: translateY(0);
+    }
+
+    50% {
+        opacity: 1;
+        transform: translateY(-3px);
+    }
+
+}
+
+
+/* ==================================================
+   Dark Mode
+================================================== */
+
+[data-theme="dark"] .app-loading {
+    background: rgba(0, 0, 0, 0.48);
+}
+
+
+[data-theme="dark"] .app-loading-card {
+    background: var(--card-bg, #202020);
+
+    border-color: rgba(255, 255, 255, 0.08);
+
+    box-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.35);
+}
+
+
+[data-theme="dark"] .app-loading-icon {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+
+/* ==================================================
+   Reduce Motion
+================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .app-loading,
+    .app-loading-card {
+        transition: none;
+    }
+
+    .app-loading-icon,
+    .app-loading-dots span {
+        animation: none;
+    }
+
+}
+.restaurant-phone {
+    display: block;
+    margin-top: 6px;
+    color: inherit;
+    text-decoration: none;
+}
+
+.restaurant-phone:hover {
+    text-decoration: underline;
+}
+
+/* ==================================================
+   Voice Search
+================================================== */
+
+.voice-search-button {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex: 0 0 40px;
+
+    width: 40px;
+    height: 40px;
+
+    margin-right: 2px;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 50%;
+
+    background: transparent;
+    color: inherit;
+
+    font-size: 19px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    -webkit-tap-highlight-color: transparent;
+
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+
+.voice-search-button:hover {
+    background: rgba(128, 128, 128, 0.12);
+}
+
+.voice-search-button:active {
+    transform: scale(0.88);
+}
+
+
+/* ===============================
+   Listening
+================================ */
+
+.voice-search-button.listening {
+    background: rgba(220, 70, 70, 0.12);
+
+    animation:
+        voice-button-pulse 1.4s infinite;
+}
+
+.voice-search-button.listening::after {
+
+    content: "";
+
+    position: absolute;
+
+    inset: -4px;
+
+    border-radius: 50%;
+
+    border: 2px solid rgba(220, 70, 70, 0.25);
+
+    animation:
+        voice-ring-pulse 1.4s infinite;
+}
+
+
+/* ===============================
+   Status
+================================ */
+
+.voice-search-status {
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 8px;
+
+    margin-top: 8px;
+
+    font-size: 13px;
+
+    color: #777;
+
+    animation:
+        voice-status-enter 0.2s ease;
+}
+
+.voice-status-dot {
+
+    width: 7px;
+    height: 7px;
+
+    flex: 0 0 7px;
+
+    border-radius: 50%;
+
+    background: #d84b4b;
+
+    animation:
+        voice-dot-pulse 1s infinite;
+}
+
+
+/* ===============================
+   Animations
+================================ */
+
+@keyframes voice-button-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+}
+
+@keyframes voice-ring-pulse {
+
+    0% {
+        opacity: 0.8;
+        transform: scale(0.9);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(1.25);
+    }
+
+}
+
+@keyframes voice-dot-pulse {
+
+    0%,
+    100% {
+        opacity: 0.4;
+        transform: scale(0.8);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.15);
+    }
+
+}
+
+@keyframes voice-status-enter {
+
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+
+/* ===============================
+   Dark Mode
+================================ */
+
+[data-theme="dark"] .voice-search-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .voice-search-status {
+    color: #aaa;
+}
+.voice-search-status {
+    display: none;
+}
+
+.voice-search-status.is-visible {
+    display: flex;
+}
+
+/* ==================================================
+   Category Horizontal Scroll
+================================================== */
+
+.category-section {
+    width: 100%;
+    overflow: hidden;
+}
+
+.category-scroll {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+
+    width: 100%;
+    max-width: 100%;
+
+    gap: 8px;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    padding: 4px 2px 8px;
+
+    box-sizing: border-box;
+
+    white-space: nowrap;
+
+    -webkit-overflow-scrolling: touch;
+
+    scrollbar-width: none;
+}
+
+.category-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.category-scroll .category {
+    flex: 0 0 auto;
+
+    width: auto;
+    min-width: max-content;
+
+    white-space: nowrap;
+}
+
+.phone {
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+
+    margin-top: 7px;
+
+    color: inherit;
+    text-decoration: none;
+
+    font-size: inherit;
+
+    cursor: pointer;
+
+    transition:
+        opacity 0.2s ease,
+        transform 0.15s ease;
+}
+
+.phone:hover {
+    opacity: 0.75;
+}
+
+.phone:active {
+    transform: scale(0.98);
+}
+
+/* ==================================================
+   群組刪除按鈕
+   ================================================== */
+
+.group-delete-button {
+    width: 40px;
+    height: 40px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border: none;
+    border-radius: 10px;
+
+    background: transparent;
+
+    cursor: pointer;
+
+    font-size: 16px;
+
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.group-delete-button:hover {
+    background: rgba(220, 38, 38, 0.12);
+}
+
+.group-delete-button:active {
+    transform: scale(0.92);
+}
+
+
+/* Dark Mode */
+
+html[data-theme="dark"] .group-delete-button:hover {
+    background: rgba(248, 113, 113, 0.16);
 }

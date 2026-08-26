@@ -110,15 +110,31 @@
 
             </div>
 
-            <button
-                id="displaySettingsButton"
-                class="display-settings-button"
-                type="button"
-                aria-label="顯示與排序"
-                title="顯示與排序"
-            >
-                ⚙️
-            </button>
+            <div class="header-actions">
+
+                <button
+                    id="groupSwitchButton"
+                    class="group-switch-button"
+                    type="button"
+                    aria-label="切換地區群組"
+                    title="切換地區群組"
+                >
+                    <span class="group-switch-icon">📍</span>
+                    <span id="groupSwitchLabel" class="group-switch-label">群組</span>
+                    <span class="group-switch-caret">▾</span>
+                </button>
+
+                <button
+                    id="displaySettingsButton"
+                    class="display-settings-button"
+                    type="button"
+                    aria-label="顯示與排序"
+                    title="顯示與排序"
+                >
+                    ⚙️
+                </button>
+
+            </div>
 
         </div>
 
@@ -159,8 +175,7 @@
             aria-label="語音搜尋"
             title="語音搜尋"
         >
-            <span class="voice-search-icon">⌕</span>
-            <span class="voice-mic-icon">●</span>
+            <span class="voice-search-icon">၊၊||၊</span>
         </button>
 
         <button
@@ -346,11 +361,76 @@
                 </section>
 
                 <button id="editOrderButton" class="settings-row-button" type="button">
-                    <span>↕️ 編輯卡片順序</span>
+                    <span>🔁 編輯卡片順序</span>
                     <span>›</span>
                 </button>
 
             </div>
+
+        </div>
+
+    </div>
+
+
+    <div id="groupSheetModal" class="modal-overlay">
+
+        <div class="display-settings-sheet group-sheet">
+
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">GROUP</p>
+                    <h2>選擇地區</h2>
+                </div>
+                <button id="closeGroupSheet" class="modal-close" type="button">×</button>
+            </div>
+
+            <div class="display-settings-content">
+
+                <div id="groupList" class="group-list"></div>
+
+                <button id="addGroupButton" class="settings-row-button group-add-button" type="button">
+                    <span>＋ 新增群組</span>
+                    <span>›</span>
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div id="groupFormModal" class="modal-overlay">
+
+        <div class="display-settings-sheet group-form-sheet">
+
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">GROUP</p>
+                    <h2 id="groupFormTitle">新增群組</h2>
+                </div>
+                <button id="closeGroupFormModal" class="modal-close" type="button">×</button>
+            </div>
+
+            <form id="groupForm" class="restaurant-form group-form">
+
+                <label class="form-field">
+                    <span>群組名稱</span>
+                    <input
+                        type="text"
+                        id="groupNameInput"
+                        placeholder="例如：台北"
+                        maxlength="20"
+                        required
+                    >
+                </label>
+
+                <div class="group-form-actions">
+                    <button type="button" id="cancelGroupFormButton" class="group-form-cancel-button">取消</button>
+                    <button type="submit" id="submitGroupFormButton" class="form-submit-button group-form-submit-button">建立</button>
+                </div>
+
+            </form>
 
         </div>
 
@@ -536,6 +616,22 @@
                                 其他
                             </option>
                         </select>
+
+                    </label>
+
+
+
+                    <!-- Group (只在編輯時顯示，新增時自動使用目前群組) -->
+
+                    <label class="form-field" id="restaurantGroupField" hidden>
+
+                        <span>
+                            所屬群組
+                        </span>
+
+                        <select
+                            id="restaurantGroup"
+                        ></select>
 
                     </label>
 
