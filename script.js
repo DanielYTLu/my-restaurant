@@ -403,8 +403,16 @@ function getWeeklyHoursText(restaurant) {
 // 群組 = 資料隔離層（不是分類、不是標籤）
 // ==================================================
 
-function generateGroupId() {
-    return "group-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+function generateUuid() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+    // Fallback UUID v4 generator if crypto.randomUUID is not available in insecure contexts
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === "x" ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
 }
 
 function saveGroupsLocal() {
@@ -605,28 +613,51 @@ async function loadGroupsFromSupabase() {
 }
 
 async function createGroupInSupabase(group) {
+    const payload = {
+        id: group.id,
+        name: group.name,
+        created_at: group.created_at || new Date().toISOString()
+    };
+
+    console.log("🚀 [createGroupInSupabase] 實際送出的 insert payload：", payload);
+
     try {
-        const { error } = await supabaseClient
+        const response = await supabaseClient
             .from("restaurant_groups")
-            .insert({
-                id: group.id,
-                name: group.name,
-                created_at: group.created_at || new Date().toISOString()
-            });
+            .insert(payload)
+            .select()
+            .single();
+
+        console.log("📥 [createGroupInSupabase] Supabase 回傳完整 response：", response);
+        console.log("📊 [createGroupInSupabase] HTTP status / response.status：", response.status);
+
+        const { data, error } = response;
 
         if (error) {
+            console.error("❌ [createGroupInSupabase] 完整 error 物件：", error);
+            console.error("❌ [createGroupInSupabase] error.code：", error.code);
+            console.error("❌ [createGroupInSupabase] error.message：", error.message);
+            console.error("❌ [createGroupInSupabase] error.details：", error.details);
+            console.error("❌ [createGroupInSupabase] error.hint：", error.hint);
+
             if (!isMissingGroupTableOrColumnError(error)) {
                 console.error("❌ 群組新增至 Supabase 失敗：", error);
             }
 
-            return false;
+            return null;
         }
 
-        return true;
+        console.log("✅ [createGroupInSupabase] Supabase Insert 成功，回傳 data：", data);
+
+        if (data && data.id) {
+            return String(data.id);
+        }
+
+        return group.id;
     }
     catch (error) {
-        console.error("❌ 群組新增錯誤：", error);
-        return false;
+        console.error("❌ [createGroupInSupabase] 發生未預期例外錯誤 (Catch)：", error);
+        return null;
     }
 }
 
@@ -6778,16 +6809,40 @@ function initializeGroupSwitching() {
         else {
 
             // 新增群組並自動切換過去
+            const groupUuid = generateUuid();
             const newGroup = {
-                id: generateGroupId(),
+                id: groupUuid,
                 name,
                 created_at: new Date().toISOString()
             };
 
             restaurantGroups.push(newGroup);
-            currentGroupId = newGroup.id;
+            currentGroupId = groupUuid;
             saveGroupsLocal();
-            createGroupInSupabase(newGroup);
+
+            if (supabaseConnected) {
+                createGroupInSupabase(newGroup).then(supabaseId => {
+                    if (supabaseId) {
+                        const targetGroup = restaurantGroups.find(g => g.id === groupUuid);
+                        if (targetGroup) {
+                            targetGroup.id = supabaseId;
+                        }
+                        if (currentGroupId === groupUuid) {
+                            currentGroupId = supabaseId;
+                        }
+                        // 同時更新該群組底下餐廳的 groupId
+                        restaurants.forEach(r => {
+                            if (r.groupId === groupUuid) {
+                                r.groupId = supabaseId;
+                            }
+                        });
+                        saveGroupsLocal();
+                        saveRestaurantsLocal();
+                        updateGroupSwitchButton();
+                        renderRestaurants();
+                    }
+                });
+            }
 
             showToast(`✅ 已建立並切換到「${name}」`, "success");
 
