@@ -1,3 +1,4 @@
+# Git & Build Ignores
 .git/
 node_modules/
 .expo/
@@ -10,3 +11,42 @@ ios/build/
 android/.gradle/
 android/app/build/
 *.log
+
+# AI 開發規範與指引 (.clineignore / 開發約束)
+# 本專案「黑白呷 (My Restaurant)」是一個基於 Vanilla JavaScript、Supabase 與 PWA 的網頁應用程式。
+# 以下為 AI 助手（Cline）在開發與修改本專案時必須嚴格遵守的規範與核心原則：
+
+## 1. 核心技術棧與架構原則
+- **純前端 (Vanilla JavaScript)**：不引入 React、Vue、Angular 等大型前端框架。所有 DOM 操作、狀態管理與事件處理均使用原生 JavaScript。
+- **後端與資料庫**：使用 Supabase (PostgreSQL) 進行雲端同步與備份。
+- **離線優先 (Offline-first)**：所有操作必須先寫入 LocalStorage，再嘗試非同步同步至 Supabase。網路失敗時不得中斷本機功能。
+- **單一檔案/模組架構**：
+  - `index.html`：HTML 主結構
+  - `script.js`：核心邏輯（維持模組化函式與 IIFE 封裝）
+  - `style.css`：樣式表（使用 CSS 變數支援亮色/暗色主題）
+  - `service-worker.js` & `manifest.json`：PWA 支援
+
+## 2. 程式碼編寫與命名規範
+- **命名慣例**：
+  - HTML ID / JS 變數 / 函式：`camelCase` (例: `restaurantList`, `fetchRestaurants`)
+  - CSS 類別：`kebab-case` (例: `restaurant-card`, `group-badge`)
+  - 常數：`SCREAMING_SNAKE_CASE` (例: `SUPABASE_URL`)
+- **HTML 最佳實踐**：
+  - 使用語意化標籤 (Semantic HTML)
+  - 所有 `<button>` 必須明確指定 `type="button"` 以防止表單意外提交
+  - 適當加上 ARIA 標籤以維持無障礙體驗 (Accessibility)
+- **JavaScript 最佳實踐**：
+  - 非同步操作必須使用 `async/await` 並以 `try-catch` 完整包覆（特別是 Supabase 請求與 LocalStorage 讀寫）
+  - 避免全域污染，善用 IIFE 封裝模組（如 `AppLoading`, `Toast` 等）
+  - 動態生成的元素需妥善處理事件委派 (Event Delegation)
+
+## 3. 資料結構與相容性維護
+- **資料模型一致性**：修改餐廳、群組或公告資料結構時，必須參考 `ai.md` 中的資料模型定義（Restaurant、Restaurant Group、Announcement、Weekly Hours）。
+- **向下相容**：處理營業時間 (`hours`) 或設定時，必須同時支援舊版字串格式與新版 JSON 物件格式，避免歷史資料崩潰。
+- **LocalStorage 鍵名規範**：嚴格使用既有鍵名 (`restaurants`, `restaurantGroups`, `currentGroupId`, `displaySettings`, `theme`)，不可隨意更改。
+
+## 4. 變更與測試流程
+- **避免破壞性變更**：修改 `script.js` 或 `index.html` 時，務必確保既有功能（群組切換、CRUD、搜尋、卡片排序、收藏同步）不受影響。
+- **完整性原則**：禁止使用省略號 (`// ... 省略其他程式碼 ...`) 或佔位符來省略程式碼，必須提供完整、可執行的程式碼片段。
+- **驗證**：修改完成後，應透過靜態檢查確保無語法錯誤，並確認符合專案現有風格。
+

@@ -259,3 +259,5 @@ displaySettings = {
 - [Supabase JS v2 Document](https://supabase.com/docs/reference/javascript/introduction)
 - [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)
 - [PWA Guide](https://web.dev/progressive-web-apps/)
+
+測試一下
