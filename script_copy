@@ -287,6 +287,15 @@ const displaySettingsButton =
 const displaySettingsModal =
     document.getElementById("displaySettingsModal");
 
+const announcementsButton = document.getElementById("announcementsButton");
+const announcementsBadge = document.getElementById("announcementsBadge");
+const announcementsModal = document.getElementById("announcementsModal");
+const closeAnnouncementsButton = document.getElementById("closeAnnouncements");
+const announcementsContent = document.getElementById("announcementsContent");
+
+const LAST_VIEWED_ANNOUNCEMENTS_KEY = "lastViewedAnnouncements";
+const ANNOUNCEMENTS_CACHE_KEY = "announcementsCache";
+
 const orderSettingsModal =
     document.getElementById("orderSettingsModal");
 const restaurantImageInput =
@@ -394,8 +403,16 @@ function getWeeklyHoursText(restaurant) {
 // 群組 = 資料隔離層（不是分類、不是標籤）
 // ==================================================
 
-function generateGroupId() {
-    return "group-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+function generateUuid() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+    // Fallback UUID v4 generator if crypto.randomUUID is not available in insecure contexts
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === "x" ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
 }
 
 function saveGroupsLocal() {
@@ -430,17 +447,8 @@ function getUncategorizedGroupId() {
     );
 
     if (!group) {
-        group = {
-            id: generateGroupId(),
-            name: UNCATEGORIZED_GROUP_NAME,
-            created_at: new Date().toISOString()
-        };
-
-        restaurantGroups.push(group);
-        saveGroupsLocal();
-
-        // 嘗試同步到 Supabase；若資料表尚未建立則安靜失敗，不影響本機使用
-        createGroupInSupabase(group);
+        // 如果群組陣列中真的沒有「未分類」，回傳第一個群組 ID 或 null，絕不在查詢時自動 generate 寫入 Supabase
+        return restaurantGroups[0]?.id || null;
     }
 
     return group.id;
@@ -496,9 +504,20 @@ function getGroupFilteredRestaurants(source = restaurants) {
         return source;
     }
 
-    return source.filter(
-        restaurant => (restaurant.groupId || getUncategorizedGroupId()) === currentGroupId
-    );
+    const validGroupIds = new Set(restaurantGroups.map(group => String(group.id)));
+    const uncatId = getUncategorizedGroupId();
+
+    return source.filter(restaurant => {
+        let rGroupId = restaurant.groupId ? String(restaurant.groupId) : null;
+
+        // 如果餐廳的 groupId 不在目前有效的群組 ID 集合中（例如 orphan ID 或 null），
+        // 僅在前端顯示層安全視為「未分類」群組，絕不自動修改 Supabase
+        if (!rGroupId || !validGroupIds.has(rGroupId)) {
+            rGroupId = uncatId;
+        }
+
+        return rGroupId === currentGroupId;
+    });
 }
 
 function getCurrentGroupName() {
@@ -562,7 +581,27 @@ async function loadGroupsFromSupabase() {
                 created_at: row.created_at || null
             }));
 
+            // 確保從 Supabase 載入時，若雲端沒有「未分類」，在前端記憶體與本地補上一個預設未分類（不強行寫入雲端破壞 schema）
+            if (!restaurantGroups.some(g => g.name === UNCATEGORIZED_GROUP_NAME)) {
+                restaurantGroups.unshift({
+                    id: "uncategorized-default",
+                    name: UNCATEGORIZED_GROUP_NAME,
+                    created_at: null
+                });
+            }
+
             saveGroupsLocal();
+        }
+        else {
+            // 若雲端 restaurant_groups 為空，確保至少有一個未分類
+            if (!restaurantGroups.some(g => g.name === UNCATEGORIZED_GROUP_NAME)) {
+                restaurantGroups = [{
+                    id: "uncategorized-default",
+                    name: UNCATEGORIZED_GROUP_NAME,
+                    created_at: null
+                }];
+                saveGroupsLocal();
+            }
         }
 
         return true;
@@ -574,32 +613,61 @@ async function loadGroupsFromSupabase() {
 }
 
 async function createGroupInSupabase(group) {
+    const payload = {
+        id: group.id,
+        name: group.name,
+        created_at: group.created_at || new Date().toISOString()
+    };
+
+    console.log("🚀 [createGroupInSupabase] 實際送出的 insert payload：", payload);
+
     try {
-        const { error } = await supabaseClient
+        const response = await supabaseClient
             .from("restaurant_groups")
-            .insert({
-                id: group.id,
-                name: group.name,
-                created_at: group.created_at || new Date().toISOString()
-            });
+            .insert(payload)
+            .select()
+            .single();
+
+        console.log("📥 [createGroupInSupabase] Supabase 回傳完整 response：", response);
+        console.log("📊 [createGroupInSupabase] HTTP status / response.status：", response.status);
+
+        const { data, error } = response;
 
         if (error) {
+            console.error("❌ [createGroupInSupabase] 完整 error 物件：", error);
+            console.error("❌ [createGroupInSupabase] error.code：", error.code);
+            console.error("❌ [createGroupInSupabase] error.message：", error.message);
+            console.error("❌ [createGroupInSupabase] error.details：", error.details);
+            console.error("❌ [createGroupInSupabase] error.hint：", error.hint);
+
             if (!isMissingGroupTableOrColumnError(error)) {
                 console.error("❌ 群組新增至 Supabase 失敗：", error);
             }
 
-            return false;
+            return null;
         }
 
-        return true;
+        console.log("✅ [createGroupInSupabase] Supabase Insert 成功，回傳 data：", data);
+
+        if (data && data.id) {
+            return String(data.id);
+        }
+
+        return group.id;
     }
     catch (error) {
-        console.error("❌ 群組新增錯誤：", error);
-        return false;
+        console.error("❌ [createGroupInSupabase] 發生未預期例外錯誤 (Catch)：", error);
+        return null;
     }
 }
 
 async function renameGroupInSupabase(id, name) {
+    const group = restaurantGroups.find(candidate => String(candidate.id) === String(id));
+    if (group && group.name === UNCATEGORIZED_GROUP_NAME) {
+        console.warn("⚠️ 系統保留群組「未分類」不可重新命名。");
+        return false;
+    }
+
     try {
         const { error } = await supabaseClient
             .from("restaurant_groups")
@@ -621,6 +689,105 @@ async function renameGroupInSupabase(id, name) {
         return false;
     }
 }
+
+
+// ==================================================
+// Announcement System (Global Scope)
+// ==================================================
+
+let announcements = [];
+let lastViewedAnnouncements = localStorage.getItem(LAST_VIEWED_ANNOUNCEMENTS_KEY) || new Date(0).toISOString();
+
+async function loadAnnouncements() {
+    const cachedAnnouncements = JSON.parse(localStorage.getItem(ANNOUNCEMENTS_CACHE_KEY));
+    if (cachedAnnouncements && cachedAnnouncements.length > 0) {
+        announcements = cachedAnnouncements;
+        renderAnnouncements(announcements);
+        updateAnnouncementsBadge();
+    }
+
+    try {
+        const { data, error } = await supabaseClient
+            .from("announcements")
+            .select("*")
+            .eq("is_published", true)
+            .order("is_pinned", { ascending: false })
+            .order("published_at", { ascending: false });
+
+        if (error) {
+            console.error("Error fetching announcements:", error);
+            return;
+        }
+
+        if (data && data.length > 0) {
+            announcements = data;
+            localStorage.setItem(ANNOUNCEMENTS_CACHE_KEY, JSON.stringify(announcements));
+            renderAnnouncements(announcements);
+            updateAnnouncementsBadge();
+        } else if (!cachedAnnouncements) {
+            announcementsContent.innerHTML = "<p class='loading-message'>目前沒有任何公告。</p>";
+        }
+    } catch (error) {
+        console.error("Supabase connection error:", error);
+    }
+}
+
+function renderAnnouncements(announcementsToRender) {
+    if (!announcementsToRender || announcementsToRender.length === 0) {
+        announcementsContent.innerHTML = "<p class='loading-message'>目前沒有任何公告。</p>";
+        return;
+    }
+
+    announcementsContent.innerHTML = announcementsToRender.map(function(announcement) {
+        const isUnread = new Date(announcement.published_at) > new Date(lastViewedAnnouncements);
+        const tagMap = { 'info': '資訊', 'update': '更新', 'event': '活動', 'maintenance': '維護', 'important': '重要' };
+        const tagText = tagMap[announcement.type] || '其他';
+        const publishedDate = new Date(announcement.published_at).toLocaleDateString('zh-TW');
+
+        return '<div class="announcement-card ' + (isUnread ? 'unread' : '') + '">' +
+               '<h3>' + escapeHtml(announcement.title) + '</h3>' +
+               '<p>' + escapeHtml(announcement.content).replace(/\n/g, '<br>') + '</p>' +
+               '<div class="meta">' +
+               '<span class="tag">' + escapeHtml(tagText) + '</span>' +
+               '<span>' + escapeHtml(publishedDate) + '</span>' +
+               '</div>' +
+               '</div>';
+    }).join("");
+}
+
+function updateAnnouncementsBadge() {
+    const hasUnread = announcements.some(a => new Date(a.published_at) > new Date(lastViewedAnnouncements));
+    announcementsBadge.classList.toggle("hidden", !hasUnread);
+}
+
+function injectMockAnnouncements() {
+    announcements = [{
+        id: 'mock-1',
+        title: '測試公告',
+        content: '這是一則測試公告，用來確認功能是否正常運作。',
+        type: 'important',
+        published_at: new Date().toISOString()
+    }];
+    renderAnnouncements(announcements);
+    updateAnnouncementsBadge();
+}
+
+window.initializeAnnouncements = function() {
+    if (!announcementsButton) return;
+    
+    announcementsButton.addEventListener("click", () => {
+        announcementsModal.classList.add("show");
+        lastViewedAnnouncements = new Date().toISOString();
+        localStorage.setItem(LAST_VIEWED_ANNOUNCEMENTS_KEY, lastViewedAnnouncements);
+        updateAnnouncementsBadge();
+    });
+
+    closeAnnouncementsButton.addEventListener("click", () => announcementsModal.classList.remove("show"));
+    announcementsModal.addEventListener("click", e => { if (e.target === announcementsModal) announcementsModal.classList.remove("show"); });
+
+    injectMockAnnouncements();
+    loadAnnouncements();
+};
 
 
 // ==================================================
@@ -649,6 +816,17 @@ async function initialize() {
 
     ensureGroupsInitialized();
     updateGroupSwitchButton();
+
+    // 初始化公告系統
+    try {
+        if (typeof window.initializeAnnouncements === "function") {
+            window.initializeAnnouncements();
+        } else {
+            console.error("❌ initializeAnnouncements 尚未註冊到 window");
+        }
+    } catch (err) {
+        console.error("❌ 公告系統初始化錯誤：", err);
+    }
 
     // 從 Supabase 載入餐廳
     showSkeletonLoading();
@@ -4981,6 +5159,9 @@ function openFullscreenMenuImage(
         </div>
 
 
+
+
+
         <div class="zoom-indicator">
 
             100%
@@ -6613,6 +6794,11 @@ function initializeGroupSwitching() {
             const group = restaurantGroups.find(candidate => candidate.id === editingGroupId);
 
             if (group) {
+                if (group.name === UNCATEGORIZED_GROUP_NAME) {
+                    alert("「未分類」群組不能重新命名。");
+                    closeGroupFormModalHandler();
+                    return;
+                }
                 group.name = name;
                 saveGroupsLocal();
                 renameGroupInSupabase(editingGroupId, name);
@@ -6624,16 +6810,40 @@ function initializeGroupSwitching() {
         else {
 
             // 新增群組並自動切換過去
+            const groupUuid = generateUuid();
             const newGroup = {
-                id: generateGroupId(),
+                id: groupUuid,
                 name,
                 created_at: new Date().toISOString()
             };
 
             restaurantGroups.push(newGroup);
-            currentGroupId = newGroup.id;
+            currentGroupId = groupUuid;
             saveGroupsLocal();
-            createGroupInSupabase(newGroup);
+
+            if (supabaseConnected) {
+                createGroupInSupabase(newGroup).then(supabaseId => {
+                    if (supabaseId) {
+                        const targetGroup = restaurantGroups.find(g => g.id === groupUuid);
+                        if (targetGroup) {
+                            targetGroup.id = supabaseId;
+                        }
+                        if (currentGroupId === groupUuid) {
+                            currentGroupId = supabaseId;
+                        }
+                        // 同時更新該群組底下餐廳的 groupId
+                        restaurants.forEach(r => {
+                            if (r.groupId === groupUuid) {
+                                r.groupId = supabaseId;
+                            }
+                        });
+                        saveGroupsLocal();
+                        saveRestaurantsLocal();
+                        updateGroupSwitchButton();
+                        renderRestaurants();
+                    }
+                });
+            }
 
             showToast(`✅ 已建立並切換到「${name}」`, "success");
 
@@ -6678,14 +6888,20 @@ function renderGroupList() {
                     ${escapeHtml(group.name)}
                 </button>
 
-                <button
-                    type="button"
-                    class="group-rename-button"
-                    data-rename-group-id="${escapeHtml(group.id)}"
-                    aria-label="修改群組名稱"
-                >
-                    ✎
-                </button>
+                ${
+                    !isUncategorized
+                        ? `
+                            <button
+                                type="button"
+                                class="group-rename-button"
+                                data-rename-group-id="${escapeHtml(group.id)}"
+                                aria-label="修改群組名稱"
+                            >
+                                ✎
+                            </button>
+                        `
+                        : ""
+                }
 
                 ${
                     !isUncategorized

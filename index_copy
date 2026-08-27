@@ -125,6 +125,17 @@
                 </button>
 
                 <button
+                    id="announcementsButton"
+                    class="announcements-button"
+                    type="button"
+                    aria-label="查看公告"
+                    title="查看公告"
+                >
+                    📢
+                    <span id="announcementsBadge" class="announcements-badge hidden"></span>
+                </button>
+
+                <button
                     id="displaySettingsButton"
                     class="display-settings-button"
                     type="button"
@@ -179,6 +190,15 @@
         </button>
 
         <button
+    type="button"
+    id="randomPickerButton"
+    class="random-picker-button"
+    aria-label="隨機抽籤"
+    title="今天吃什麼？"
+>
+    🎲
+</button>
+        <button
             type="button"
             id="clearSearchButton"
             class="clear-search-button"
@@ -203,7 +223,7 @@
 
 </section>
 
-        <section class="category-section">
+<section class="category-section">
 
     <div class="category-scroll">
 
@@ -317,6 +337,22 @@
 
     </main>
 
+
+    <div id="announcementsModal" class="modal-overlay">
+        <div class="announcements-sheet">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">ANNOUNCEMENTS</p>
+                    <h2>公告</h2>
+                </div>
+                <button id="closeAnnouncements" class="modal-close" type="button">×</button>
+            </div>
+            <div class="announcements-content" id="announcementsContent">
+                <!-- 公告列表將會透過 JavaScript 動態載入 -->
+                <p class="loading-message">載入公告中...</p>
+            </div>
+        </div>
+    </div>
 
     <div id="displaySettingsModal" class="modal-overlay">
 
