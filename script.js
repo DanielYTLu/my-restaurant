@@ -692,6 +692,105 @@ async function renameGroupInSupabase(id, name) {
 
 
 // ==================================================
+// Announcement System (Global Scope)
+// ==================================================
+
+let announcements = [];
+let lastViewedAnnouncements = localStorage.getItem(LAST_VIEWED_ANNOUNCEMENTS_KEY) || new Date(0).toISOString();
+
+async function loadAnnouncements() {
+    const cachedAnnouncements = JSON.parse(localStorage.getItem(ANNOUNCEMENTS_CACHE_KEY));
+    if (cachedAnnouncements && cachedAnnouncements.length > 0) {
+        announcements = cachedAnnouncements;
+        renderAnnouncements(announcements);
+        updateAnnouncementsBadge();
+    }
+
+    try {
+        const { data, error } = await supabaseClient
+            .from("announcements")
+            .select("*")
+            .eq("is_published", true)
+            .order("is_pinned", { ascending: false })
+            .order("published_at", { ascending: false });
+
+        if (error) {
+            console.error("Error fetching announcements:", error);
+            return;
+        }
+
+        if (data && data.length > 0) {
+            announcements = data;
+            localStorage.setItem(ANNOUNCEMENTS_CACHE_KEY, JSON.stringify(announcements));
+            renderAnnouncements(announcements);
+            updateAnnouncementsBadge();
+        } else if (!cachedAnnouncements) {
+            announcementsContent.innerHTML = "<p class='loading-message'>目前沒有任何公告。</p>";
+        }
+    } catch (error) {
+        console.error("Supabase connection error:", error);
+    }
+}
+
+function renderAnnouncements(announcementsToRender) {
+    if (!announcementsToRender || announcementsToRender.length === 0) {
+        announcementsContent.innerHTML = "<p class='loading-message'>目前沒有任何公告。</p>";
+        return;
+    }
+
+    announcementsContent.innerHTML = announcementsToRender.map(function(announcement) {
+        const isUnread = new Date(announcement.published_at) > new Date(lastViewedAnnouncements);
+        const tagMap = { 'info': '資訊', 'update': '更新', 'event': '活動', 'maintenance': '維護', 'important': '重要' };
+        const tagText = tagMap[announcement.type] || '其他';
+        const publishedDate = new Date(announcement.published_at).toLocaleDateString('zh-TW');
+
+        return '<div class="announcement-card ' + (isUnread ? 'unread' : '') + '">' +
+               '<h3>' + escapeHtml(announcement.title) + '</h3>' +
+               '<p>' + escapeHtml(announcement.content).replace(/\n/g, '<br>') + '</p>' +
+               '<div class="meta">' +
+               '<span class="tag">' + escapeHtml(tagText) + '</span>' +
+               '<span>' + escapeHtml(publishedDate) + '</span>' +
+               '</div>' +
+               '</div>';
+    }).join("");
+}
+
+function updateAnnouncementsBadge() {
+    const hasUnread = announcements.some(a => new Date(a.published_at) > new Date(lastViewedAnnouncements));
+    announcementsBadge.classList.toggle("hidden", !hasUnread);
+}
+
+function injectMockAnnouncements() {
+    announcements = [{
+        id: 'mock-1',
+        title: '測試公告',
+        content: '這是一則測試公告，用來確認功能是否正常運作。',
+        type: 'important',
+        published_at: new Date().toISOString()
+    }];
+    renderAnnouncements(announcements);
+    updateAnnouncementsBadge();
+}
+
+window.initializeAnnouncements = function() {
+    if (!announcementsButton) return;
+    
+    announcementsButton.addEventListener("click", () => {
+        announcementsModal.classList.add("show");
+        lastViewedAnnouncements = new Date().toISOString();
+        localStorage.setItem(LAST_VIEWED_ANNOUNCEMENTS_KEY, lastViewedAnnouncements);
+        updateAnnouncementsBadge();
+    });
+
+    closeAnnouncementsButton.addEventListener("click", () => announcementsModal.classList.remove("show"));
+    announcementsModal.addEventListener("click", e => { if (e.target === announcementsModal) announcementsModal.classList.remove("show"); });
+
+    injectMockAnnouncements();
+    loadAnnouncements();
+};
+
+
+// ==================================================
 // Initialize
 // ==================================================
 
@@ -720,7 +819,11 @@ async function initialize() {
 
     // 初始化公告系統
     try {
-        initializeAnnouncements();
+        if (typeof window.initializeAnnouncements === "function") {
+            window.initializeAnnouncements();
+        } else {
+            console.error("❌ initializeAnnouncements 尚未註冊到 window");
+        }
     } catch (err) {
         console.error("❌ 公告系統初始化錯誤：", err);
     }
@@ -5056,109 +5159,7 @@ function openFullscreenMenuImage(
         </div>
 
 
-// ==================================================
-// Announcement
-// ==================================================
 
-let announcements = [];
-let lastViewedAnnouncements = localStorage.getItem(LAST_VIEWED_ANNOUNCEMENTS_KEY) || new Date(0).toISOString();
-
-async function loadAnnouncements() {
-    const cachedAnnouncements = JSON.parse(localStorage.getItem(ANNOUNCEMENTS_CACHE_KEY));
-    if (cachedAnnouncements && cachedAnnouncements.length > 0) {
-        announcements = cachedAnnouncements;
-        renderAnnouncements(announcements);
-        updateAnnouncementsBadge();
-    }
-
-    try {
-        const { data, error } = await supabaseClient
-            .from("announcements")
-            .select("*")
-            .eq("is_published", true)
-            .order("is_pinned", { ascending: false })
-            .order("published_at", { ascending: false });
-
-        if (error) {
-            console.error("Error fetching announcements:", error);
-            return;
-        }
-
-        if (data && data.length > 0) {
-            announcements = data;
-            localStorage.setItem(ANNOUNCEMENTS_CACHE_KEY, JSON.stringify(announcements));
-            renderAnnouncements(announcements);
-            updateAnnouncementsBadge();
-        } else if (!cachedAnnouncements) {
-            announcementsContent.innerHTML = "<p class='loading-message'>目前沒有任何公告。</p>";
-        }
-    } catch (error) {
-        console.error("Supabase connection error:", error);
-    }
-}
-
-function renderAnnouncements(announcementsToRender) {
-    if (!announcementsToRender || announcementsToRender.length === 0) {
-        announcementsContent.innerHTML = "<p class='loading-message'>目前沒有任何公告。</p>";
-        return;
-    }
-
-    announcementsContent.innerHTML = announcementsToRender.map(function(announcement) {
-        const isUnread = new Date(announcement.published_at) > new Date(lastViewedAnnouncements);
-        const tagMap = { 'info': '資訊', 'update': '更新', 'event': '活動', 'maintenance': '維護', 'important': '重要' };
-        const tagText = tagMap[announcement.type] || '其他';
-        const publishedDate = new Date(announcement.published_at).toLocaleDateString('zh-TW');
-
-        return '<div class="announcement-card ' + (isUnread ? 'unread' : '') + '">' +
-               '<h3>' + escapeHtml(announcement.title) + '</h3>' +
-               '<p>' + escapeHtml(announcement.content).replace(/\n/g, '<br>') + '</p>' +
-               '<div class="meta">' +
-               '<span class="tag">' + escapeHtml(tagText) + '</span>' +
-               '<span>' + escapeHtml(publishedDate) + '</span>' +
-               '</div>' +
-               '</div>';
-    }).join("");
-}
-
-function updateAnnouncementsBadge() {
-    const hasUnread = announcements.some(a => new Date(a.published_at) > new Date(lastViewedAnnouncements));
-    announcementsBadge.classList.toggle("hidden", !hasUnread);
-}
-
-// 測試假資料
-function injectMockAnnouncements() {
-    announcements = [{
-        id: 'mock-1',
-        title: '測試公告',
-        content: '這是一則測試公告，用來確認功能是否正常運作。',
-        type: 'important',
-        published_at: new Date().toISOString()
-    }];
-    renderAnnouncements(announcements);
-    updateAnnouncementsBadge();
-}
-
-// 提升公告功能函數至全域，確保 initialize 可見
-function initializeAnnouncements() {
-    if (!announcementsButton) return;
-    
-    announcementsButton.addEventListener("click", () => {
-        announcementsModal.classList.add("show");
-        lastViewedAnnouncements = new Date().toISOString();
-        localStorage.setItem(LAST_VIEWED_ANNOUNCEMENTS_KEY, lastViewedAnnouncements);
-        updateAnnouncementsBadge();
-    });
-
-    closeAnnouncementsButton.addEventListener("click", () => announcementsModal.classList.remove("show"));
-    announcementsModal.addEventListener("click", e => { if (e.target === announcementsModal) announcementsModal.classList.remove("show"); });
-
-    // 優先使用假資料測試
-    injectMockAnnouncements();
-    loadAnnouncements();
-}
-
-// 統籌初始化
-// initializeAnnouncements();
 
 
         <div class="zoom-indicator">

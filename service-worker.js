@@ -7,7 +7,12 @@ const APP_SHELL = [
     "./manifest.json"
 ];
 
+const isFileProtocol = self.location.protocol === "file:";
+
 self.addEventListener("install", event => {
+    if (isFileProtocol) {
+        return;
+    }
     event.waitUntil(
         caches.open(CACHE_VERSION).then(cache => cache.addAll(APP_SHELL))
     );
@@ -15,6 +20,9 @@ self.addEventListener("install", event => {
 });
 
 self.addEventListener("activate", event => {
+    if (isFileProtocol) {
+        return;
+    }
     event.waitUntil(
         caches.keys().then(keys => Promise.all(
             keys
@@ -30,6 +38,11 @@ self.addEventListener("fetch", event => {
         return;
     }
 
+    if (isFileProtocol || event.request.url.startsWith("file:")) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
+
     event.respondWith(
         fetch(event.request)
             .then(response => {
@@ -40,3 +53,4 @@ self.addEventListener("fetch", event => {
             .catch(() => caches.match(event.request))
     );
 });
+
