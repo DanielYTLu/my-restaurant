@@ -439,17 +439,8 @@ function getUncategorizedGroupId() {
     );
 
     if (!group) {
-        group = {
-            id: generateGroupId(),
-            name: UNCATEGORIZED_GROUP_NAME,
-            created_at: new Date().toISOString()
-        };
-
-        restaurantGroups.push(group);
-        saveGroupsLocal();
-
-        // 嘗試同步到 Supabase；若資料表尚未建立則安靜失敗，不影響本機使用
-        createGroupInSupabase(group);
+        // 如果群組陣列中真的沒有「未分類」，回傳第一個群組 ID 或 null，絕不在查詢時自動 generate 寫入 Supabase
+        return restaurantGroups[0]?.id || null;
     }
 
     return group.id;
@@ -505,9 +496,20 @@ function getGroupFilteredRestaurants(source = restaurants) {
         return source;
     }
 
-    return source.filter(
-        restaurant => (restaurant.groupId || getUncategorizedGroupId()) === currentGroupId
-    );
+    const validGroupIds = new Set(restaurantGroups.map(group => String(group.id)));
+    const uncatId = getUncategorizedGroupId();
+
+    return source.filter(restaurant => {
+        let rGroupId = restaurant.groupId ? String(restaurant.groupId) : null;
+
+        // 如果餐廳的 groupId 不在目前有效的群組 ID 集合中（例如 orphan ID 或 null），
+        // 僅在前端顯示層安全視為「未分類」群組，絕不自動修改 Supabase
+        if (!rGroupId || !validGroupIds.has(rGroupId)) {
+            rGroupId = uncatId;
+        }
+
+        return rGroupId === currentGroupId;
+    });
 }
 
 function getCurrentGroupName() {
@@ -571,7 +573,27 @@ async function loadGroupsFromSupabase() {
                 created_at: row.created_at || null
             }));
 
+            // 確保從 Supabase 載入時，若雲端沒有「未分類」，在前端記憶體與本地補上一個預設未分類（不強行寫入雲端破壞 schema）
+            if (!restaurantGroups.some(g => g.name === UNCATEGORIZED_GROUP_NAME)) {
+                restaurantGroups.unshift({
+                    id: "uncategorized-default",
+                    name: UNCATEGORIZED_GROUP_NAME,
+                    created_at: null
+                });
+            }
+
             saveGroupsLocal();
+        }
+        else {
+            // 若雲端 restaurant_groups 為空，確保至少有一個未分類
+            if (!restaurantGroups.some(g => g.name === UNCATEGORIZED_GROUP_NAME)) {
+                restaurantGroups = [{
+                    id: "uncategorized-default",
+                    name: UNCATEGORIZED_GROUP_NAME,
+                    created_at: null
+                }];
+                saveGroupsLocal();
+            }
         }
 
         return true;

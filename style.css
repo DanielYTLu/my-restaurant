@@ -4879,3 +4879,15 @@ html[data-theme="dark"] .group-delete-button:hover {
     transform: scale(0.92);
 
 }
+/* ==================================================
+   修正公告按鈕深色模式外觀
+================================================== */
+[data-theme="dark"] .announcements-button {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .announcements-button:hover {
+    background: var(--dark-elevated);
+}
