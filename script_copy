@@ -93,7 +93,7 @@ const supabaseClient =
 
 let restaurants = [];
 
-
+let randomPickerResultId = null;
 // ==================================================
 // 地區 / 餐廳群組 (Group = 資料隔離層，不是分類)
 // ==================================================
@@ -689,6 +689,7 @@ function loadRestaurantsFromLocal() {
     assignMissingGroupIds();
     cleanDisplayOrder();
     renderRestaurants();
+randomPickerResultId = null;
 }
 
 
@@ -1442,7 +1443,7 @@ async function deleteRestaurantFromSupabase(
 
 function renderRestaurants(
     restaurantData = restaurants
-) {
+) {  
 
     restaurantList.innerHTML = "";
     applyDisplaySettings();
@@ -1469,17 +1470,25 @@ function renderRestaurants(
     }
 
 
-    visibleRestaurants.forEach(
-        restaurant => {
+visibleRestaurants.forEach(
+    restaurant => {
 
-            restaurantList.appendChild(
-                createRestaurantCard(
-                    restaurant
-                )
+        const card =
+            createRestaurantCard(
+                restaurant
             );
 
+        if (
+            randomPickerResultId &&
+            String(restaurant.id) === randomPickerResultId
+        ) {
+            card.classList.add("random-picker-selected");
         }
-    );
+
+        restaurantList.appendChild(card);
+
+    }
+);
 
 }
 
@@ -1600,7 +1609,7 @@ function createRestaurantCard(
 
     article.className =
         "restaurant-card";
-
+article.dataset.id = String(restaurant.id);
 
     const menuCount =
         restaurant.menuImages
@@ -1929,6 +1938,7 @@ async function toggleFavorite(id, favoriteButton) {
         !newFavorite
     ) {
         renderRestaurants();
+randomPickerResultId = null;
     }
 
 
@@ -1971,6 +1981,7 @@ async function toggleFavorite(id, favoriteButton) {
                     activeCategory === "收藏"
                 ) {
                     renderRestaurants();
+randomPickerResultId = null;
                 }
 
             }
@@ -2092,6 +2103,7 @@ clearSearchButton.addEventListener(
         clearSearchButton.hidden = true;
 
         renderRestaurants();
+randomPickerResultId = null;
 
         searchInput.focus();
 
@@ -2466,14 +2478,17 @@ categories.forEach(
                 // ==================================================
 
                 if (
-                    category === "全部"
-                ) {
+    category === "全部"
+) {
 
-                    renderRestaurants();
+    randomPickerResultId = null;
 
-                    return;
+    renderRestaurants();
+randomPickerResultId = null;
 
-                }
+    return;
+
+}
 
 
                 // ==================================================
@@ -2985,161 +3000,192 @@ console.log(
 }
 
 
-                console.log(
-                    "☁️ 餐廳已成功更新到 Supabase：",
-                    updatedRestaurant
-                );
-
-
-                // --------------------------------------------------
-                // 重新從 Supabase 讀取
-                // --------------------------------------------------
-
-                await loadRestaurants();
-
-
-                // --------------------------------------------------
-                // 更新畫面
-                // --------------------------------------------------
-
-                renderRestaurants();
-
-
-                // --------------------------------------------------
-                // 關閉編輯視窗
-                // --------------------------------------------------
-
-                closeRestaurantModal();
-
-
-                alert(
-                    "✅ 餐廳資料已更新！"
-                );
-
-            }
-
-
-            // --------------------------------------------------
-            // Supabase 沒連線
-            // --------------------------------------------------
-
-            else {
-
-                const index =
-                    restaurants.findIndex(
-                        restaurant =>
-                            String(
-                                restaurant.id
-                            ) ===
-                            String(
-                                editingId
-                            )
-                    );
-
-
-                if (index === -1) {
-
-    AppLoading.hide();
-
-    alert(
-        "找不到要編輯的餐廳。"
-    );
-
-    return;
-
-}
-
-
-                restaurants[index] = {
-
-                    ...restaurants[index],
-
-                    ...restaurantData
-
-                };
-
-
-                saveRestaurantsLocal();
-
-                renderRestaurants();
-
-                closeRestaurantModal();
-
-
-                alert(
-                    "⚠️ Supabase 尚未連線，目前只儲存在本機。"
-                );
-
-            }
-
-        }
-
-
-        // ==================================================
-        // ADD
-        // ==================================================
-
-        else {
-
-            const newRestaurant = {
-
-                id:
-                    String(
-                        Date.now()
-                    ),
-
-                ...restaurantData,
-
-                favorite:
-                    false
-
-            };
-
-
-            console.log(
-                "➕ 開始新增餐廳：",
-                newRestaurant
-            );
-
-
-            // --------------------------------------------------
-            // Supabase
-            // --------------------------------------------------
-
-            if (supabaseConnected) {
-
-                const saved =
-                    await createRestaurantInSupabase(
-                        newRestaurant
-                    );
-
-
-                if (saved) {
-
                     console.log(
-                        "☁️ 新餐廳已成功同步到 Supabase：",
-                        saved
+                        "☁️ 餐廳已成功更新到 Supabase：",
+                        updatedRestaurant
                     );
 
 
+                    // --------------------------------------------------
                     // 重新從 Supabase 讀取
+                    // --------------------------------------------------
+
                     await loadRestaurants();
 
 
+                    // --------------------------------------------------
                     // 更新畫面
+                    // --------------------------------------------------
+
                     renderRestaurants();
+randomPickerResultId = null;
 
 
-                    // 關閉視窗
+                    // --------------------------------------------------
+                    // 關閉編輯視窗
+                    // --------------------------------------------------
+
                     closeRestaurantModal();
 
 
                     alert(
-                        "✅ 餐廳已成功新增！"
+                        "✅ 餐廳資料已更新！"
                     );
 
                 }
 
+
+                // --------------------------------------------------
+                // Supabase 沒連線
+                // --------------------------------------------------
+
+                else {
+
+                    const index =
+                        restaurants.findIndex(
+                            restaurant =>
+                                String(
+                                    restaurant.id
+                                ) ===
+                                String(
+                                    editingId
+                                )
+                        );
+
+
+                    if (index === -1) {
+
+        AppLoading.hide();
+
+        alert(
+            "找不到要編輯的餐廳。"
+        );
+
+        return;
+
+    }
+
+
+                    restaurants[index] = {
+
+                        ...restaurants[index],
+
+                        ...restaurantData
+
+                    };
+
+
+                    saveRestaurantsLocal();
+
+                    renderRestaurants();
+randomPickerResultId = null;
+
+                    closeRestaurantModal();
+
+
+                    alert(
+                        "⚠️ Supabase 尚未連線，目前只儲存在本機。"
+                    );
+
+                }
+
+            }
+
+
+            // ==================================================
+            // ADD
+            // ==================================================
+
+            else {
+
+                const newRestaurant = {
+
+                    id:
+                        String(
+                            Date.now()
+                        ),
+
+                    ...restaurantData,
+
+                    favorite:
+                        false
+
+                };
+
+
+                console.log(
+                    "➕ 開始新增餐廳：",
+                    newRestaurant
+                );
+
+
+                // --------------------------------------------------
+                // Supabase
+                // --------------------------------------------------
+
+                if (supabaseConnected) {
+
+                    const saved =
+                        await createRestaurantInSupabase(
+                            newRestaurant
+                        );
+
+
+                    if (saved) {
+
+                        console.log(
+                            "☁️ 新餐廳已成功同步到 Supabase：",
+                            saved
+                        );
+
+
+                        // 重新從 Supabase 讀取
+                        await loadRestaurants();
+
+
+                        // 更新畫面
+                        renderRestaurants();
+randomPickerResultId = null;
+
+
+                        // 關閉視窗
+                        closeRestaurantModal();
+
+
+                        alert(
+                            "✅ 餐廳已成功新增！"
+                        );
+
+                    }
+
+
+                    else {
+
+                        restaurants.unshift(
+                            newRestaurant
+                        );
+
+
+                        saveRestaurantsLocal();
+
+                        renderRestaurants();
+randomPickerResultId = null;
+
+                        closeRestaurantModal();
+
+
+                        alert(
+                            "⚠️ 餐廳已暫存，但無法同步到 Supabase。"
+                        );
+
+                    }
+
+                }
+
+
+                // --------------------------------------------------
+                // Local fallback
+                // --------------------------------------------------
 
                 else {
 
@@ -3151,44 +3197,18 @@ console.log(
                     saveRestaurantsLocal();
 
                     renderRestaurants();
+randomPickerResultId = null;
 
                     closeRestaurantModal();
 
 
                     alert(
-                        "⚠️ 餐廳已暫存，但無法同步到 Supabase。"
+                        "⚠️ Supabase 尚未連線，目前只儲存在本機。"
                     );
 
                 }
 
             }
-
-
-            // --------------------------------------------------
-            // Local fallback
-            // --------------------------------------------------
-
-            else {
-
-                restaurants.unshift(
-                    newRestaurant
-                );
-
-
-                saveRestaurantsLocal();
-
-                renderRestaurants();
-
-                closeRestaurantModal();
-
-
-                alert(
-                    "⚠️ Supabase 尚未連線，目前只儲存在本機。"
-                );
-
-            }
-
-        }
 
 
         // ==================================================
@@ -3860,6 +3880,7 @@ async function deleteRestaurant(
         // --------------------------------------------------
 
         renderRestaurants();
+randomPickerResultId = null;
 
 
         alert(
@@ -3890,6 +3911,7 @@ async function deleteRestaurant(
         saveRestaurantsLocal();
 
         renderRestaurants();
+randomPickerResultId = null;
 
 
         alert(
@@ -6042,8 +6064,98 @@ initializeGroupSwitching();
 initializeRestaurantImageUpload();
 initializeWeeklyHours();
 initializeMenuPreview();
-
+initializeRandomPicker();
 initializeMenuRemoveButtons();
+
+// ==================================================
+// Random Picker
+// ==================================================
+
+function initializeRandomPicker() {
+
+    const randomPickerButton =
+        document.getElementById("randomPickerButton");
+
+    if (!randomPickerButton) {
+        return;
+    }
+
+    randomPickerButton.addEventListener("click", () => {
+
+        const availableRestaurants =
+            getGroupFilteredRestaurants(restaurants);
+
+        if (availableRestaurants.length === 0) {
+            showToast("目前群組沒有餐廳可以抽籤", "info");
+            return;
+        }
+
+        const randomIndex =
+            Math.floor(
+                Math.random() * availableRestaurants.length
+            );
+
+      const selectedRestaurant =
+    availableRestaurants[randomIndex];
+
+console.log(
+    "🎲 隨機抽中的餐廳：",
+    selectedRestaurant
+);
+
+randomPickerResultId = String(selectedRestaurant.id);
+renderRestaurants();
+randomPickerResultId = null;
+
+showToast(
+    `🎲 今天吃「${selectedRestaurant.name}」！`,
+    "success"
+);
+
+const selectedCard =
+    restaurantList.querySelector(
+        `[data-id="${CSS.escape(String(selectedRestaurant.id))}"]`
+    );
+
+selectedCard?.scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+});
+
+setTimeout(() => {
+
+    if (!selectedCard) {
+        return;
+    }
+
+    const winnerBadge =
+        document.createElement("div");
+
+    winnerBadge.className =
+        "random-picker-winner-badge";
+
+winnerBadge.textContent =
+    `今天吃 ${selectedRestaurant.name}`;
+
+    selectedCard.appendChild(
+        winnerBadge
+    );
+
+    setTimeout(() => {
+
+        selectedCard.classList.remove(
+            "random-picker-selected"
+        );
+
+        winnerBadge.remove();
+
+    }, 3000);
+
+}, 300);
+
+    });
+
+}
 
 if (
     "serviceWorker" in navigator
@@ -6320,6 +6432,7 @@ async function loadRestaurants() {
     // ==================================================
 
     renderRestaurants();
+randomPickerResultId = null;
 
 }
 
@@ -6356,6 +6469,7 @@ function initializeDisplaySettings() {
             displaySettings.viewMode = button.dataset.viewMode;
             saveDisplaySettings();
             renderRestaurants();
+randomPickerResultId = null;
             updateDisplaySettingsControls();
         });
     });
@@ -6384,6 +6498,7 @@ function initializeDisplaySettings() {
         saveDisplaySettings();
         orderSettingsModal.classList.remove("show");
         renderRestaurants();
+randomPickerResultId = null;
     });
 
     updateDisplaySettingsControls();
@@ -6527,6 +6642,7 @@ function initializeGroupSwitching() {
         closeGroupFormModalHandler();
         updateGroupSwitchButton();
         renderRestaurants();
+randomPickerResultId = null;
 
     });
 
@@ -6675,6 +6791,7 @@ function switchGroup(groupId) {
 
     updateGroupSwitchButton();
     renderRestaurants();
+randomPickerResultId = null;
 }
 
 function openRenameGroupModal(groupId) {
@@ -6988,6 +7105,7 @@ async function deleteGroup(groupId) {
     renderGroupList();
 
     renderRestaurants();
+randomPickerResultId = null;
 
 
     showToast(

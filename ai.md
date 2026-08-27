@@ -68,6 +68,23 @@ my-restaurant/
 }
 ```
 
+### Announcement (公告)
+
+```javascript
+{
+  id: string,                    // 唯一識別碼 (UUID)
+  created_at: string,            // 建立時間
+  title: string,                 // 公告標題
+  content: string,               // 公告內容 (支援 Markdown 或純文字)
+  type: 'info' | 'update' | 'event' | 'maintenance' | 'important', // 公告類型
+  is_pinned: boolean,            // 是否置頂
+  is_published: boolean,         // 是否已發布
+  published_at: string | null,   // 發布時間
+  author_id: string | null,      // 作者 (未來開發者後台帳號 ID)
+  metadata: object               // 預留未來擴充欄位 (JSONB)
+}
+```
+
 ### Weekly Hours (每週營業時間格式)
 
 ```javascript
@@ -96,9 +113,10 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_UykY-RJm0HyKtmJkkE9CWg_CDFpwlHJ
 ### 資料表
 
 | 資料表名稱 | 用途 |
-|-----------|------|
+|-------------------|------|
 | `restaurants` | 儲存餐廳資料 |
 | `restaurant_groups` | 儲存群組資料 |
+| `announcements` | 儲存公告資料 |
 
 ### 同步策略
 
@@ -106,6 +124,7 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_UykY-RJm0HyKtmJkkE9CWg_CDFpwlHJ
 - **雲端備份**: 嘗試同步到 Supabase，失敗不影響本機使用
 - **收藏同步**: 使用 `favorite_sync` 表追蹤收藏變更版本
 - **群組隔離**: 每個群組有獨立的排序設定
+- **公告快取**: 儲存公告到 LocalStorage，並追蹤使用者上次查看時間，以顯示未讀標記。
 
 ---
 

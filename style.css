@@ -104,16 +104,23 @@ img {
 
 }
 
-.display-settings-button {
+.display-settings-button,
+.announcements-button {
     width: 42px;
     height: 42px;
     border: 1px solid #e1e1dc;
     border-radius: 50%;
     background: white;
     font-size: 19px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
 }
 
-.display-settings-button:active {
+.display-settings-button:active,
+.announcements-button:active {
     transform: scale(0.96);
 }
 
@@ -2740,6 +2747,7 @@ body {
 }
 
 .display-settings-button,
+.announcements-button,
 .clear-search-button,
 .favorite,
 .modal-close {
@@ -2747,12 +2755,14 @@ body {
 }
 
 .display-settings-button:hover,
+.announcements-button:hover,
 .clear-search-button:hover,
 .modal-close:hover {
     background: #e9e9e5;
 }
 
 .display-settings-button:active,
+.announcements-button:active,
 .clear-search-button:active,
 .modal-close:active,
 .card-actions button:active,
@@ -3745,6 +3755,264 @@ body.font-extra-large .card-actions button {
 [data-theme="dark"] .display-settings-sheet::before {
     background: #555550;
 }
+
+/* ==================================================
+   公告面板
+================================================== */
+
+.announcements-sheet {
+    width: 100%;
+    max-width: 760px;
+    background: white;
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    box-shadow: 0 -8px 30px rgba(32, 32, 32, 0.1);
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh; /* Make it scrollable */
+    overflow: hidden;
+    transform: translateY(100%);
+    transition: transform var(--motion-normal);
+}
+
+@media (min-width: 768px) {
+    .announcements-sheet {
+        border-radius: 22px;
+    }
+}
+
+.modal-overlay.show .announcements-sheet {
+    transform: translateY(0);
+    animation: sheet-enter 260ms var(--ease-emphasized, ease-out) both;
+}
+
+.announcements-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0 20px 20px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.announcement-card {
+    background: #fdfdfd;
+    border: 1px solid #e1e1dc;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+}
+
+.announcement-card.unread::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 8px;
+    height: 8px;
+    background-color: #ff3b30;
+    border-radius: 50%;
+}
+
+
+.announcement-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: #333;
+}
+
+.announcement-card p {
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+    color: #555;
+}
+
+.announcement-card .meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #888;
+}
+
+.announcement-card .tag {
+    background-color: #e0e0e0;
+    color: #555;
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* Dark mode compatibility */
+[data-theme="dark"] .announcements-sheet {
+    background: var(--dark-bg);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .announcements-sheet::before {
+    background: #555550;
+}
+
+[data-theme="dark"] .announcement-card {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .announcement-card h3 {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .announcement-card p {
+    color: var(--dark-text-secondary);
+}
+
+[data-theme="dark"] .announcement-card .meta {
+    color: var(--dark-text-tertiary);
+}
+
+[data-theme="dark"] .announcement-card .tag {
+    background-color: var(--dark-background-secondary);
+    color: var(--dark-text-secondary);
+}
+
+[data-theme="dark"] .announcement-card.unread::before {
+    border: 1px solid var(--dark-card);
+}
+
+
+/* ==================================================
+   公告面板
+================================================== */
+
+.announcements-sheet {
+    width: 100%;
+    max-width: 760px;
+    background: white;
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    box-shadow: 0 -8px 30px rgba(32, 32, 32, 0.1);
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh; /* Make it scrollable */
+    overflow: hidden;
+    transform: translateY(100%);
+    transition: transform var(--motion-normal);
+}
+
+@media (min-width: 768px) {
+    .announcements-sheet {
+        border-radius: 22px;
+    }
+}
+
+.modal-overlay.show .announcements-sheet {
+    transform: translateY(0);
+    animation: sheet-enter 260ms var(--ease-emphasized, ease-out) both;
+}
+
+.announcements-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0 20px 20px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.announcement-card {
+    background: #fdfdfd;
+    border: 1px solid #e1e1dc;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+}
+
+.announcement-card.unread::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 8px;
+    height: 8px;
+    background-color: #ff3b30;
+    border-radius: 50%;
+}
+
+
+.announcement-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: #333;
+}
+
+.announcement-card p {
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+    color: #555;
+}
+
+.announcement-card .meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #888;
+}
+
+.announcement-card .tag {
+    background-color: #e0e0e0;
+    color: #555;
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* Dark mode compatibility */
+[data-theme="dark"] .announcements-sheet {
+    background: var(--dark-bg);
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .announcements-sheet::before {
+    background: #555550;
+}
+
+[data-theme="dark"] .announcement-card {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .announcement-card h3 {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .announcement-card p {
+    color: var(--dark-text-secondary);
+}
+
+[data-theme="dark"] .announcement-card .meta {
+    color: var(--dark-text-tertiary);
+}
+
+[data-theme="dark"] .announcement-card .tag {
+    background-color: var(--dark-background-secondary);
+    color: var(--dark-text-secondary);
+}
+
+[data-theme="dark"] .announcement-card.unread::before {
+    border: 1px solid var(--dark-card);
+}
+
 
 
 /* ==================================================
