@@ -631,6 +631,12 @@ async function createGroupInSupabase(group) {
 }
 
 async function renameGroupInSupabase(id, name) {
+    const group = restaurantGroups.find(candidate => String(candidate.id) === String(id));
+    if (group && group.name === UNCATEGORIZED_GROUP_NAME) {
+        console.warn("⚠️ 系統保留群組「未分類」不可重新命名。");
+        return false;
+    }
+
     try {
         const { error } = await supabaseClient
             .from("restaurant_groups")
@@ -6756,6 +6762,11 @@ function initializeGroupSwitching() {
             const group = restaurantGroups.find(candidate => candidate.id === editingGroupId);
 
             if (group) {
+                if (group.name === UNCATEGORIZED_GROUP_NAME) {
+                    alert("「未分類」群組不能重新命名。");
+                    closeGroupFormModalHandler();
+                    return;
+                }
                 group.name = name;
                 saveGroupsLocal();
                 renameGroupInSupabase(editingGroupId, name);
@@ -6821,14 +6832,20 @@ function renderGroupList() {
                     ${escapeHtml(group.name)}
                 </button>
 
-                <button
-                    type="button"
-                    class="group-rename-button"
-                    data-rename-group-id="${escapeHtml(group.id)}"
-                    aria-label="修改群組名稱"
-                >
-                    ✎
-                </button>
+                ${
+                    !isUncategorized
+                        ? `
+                            <button
+                                type="button"
+                                class="group-rename-button"
+                                data-rename-group-id="${escapeHtml(group.id)}"
+                                aria-label="修改群組名稱"
+                            >
+                                ✎
+                            </button>
+                        `
+                        : ""
+                }
 
                 ${
                     !isUncategorized
