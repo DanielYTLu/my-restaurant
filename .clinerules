@@ -1,0 +1,15 @@
+# HTML/CSS/JS 專案專屬工作守則
+
+## 1. 專案技術規範
+- 本專案為純前端專案，使用原生 HTML5, CSS3, 與 Vanilla JavaScript (ES6+)。
+- 除非外在明確要求，否則禁止引進任何 npm 外部套件或建構工具（如 Webpack, Vite, Tailwind CLI 等）。
+- 樣式調整優先使用專案現有的 CSS 檔案，避免在 HTML 中寫大量的 inline style。
+
+## 2. 工具使用限制
+- 禁止執行 `npm install`、`yarn` 等套件管理指令。
+- 尋找程式碼時，請精準使用 `read_file` 讀取特定 HTML/CSS/JS，避免使用全域 `search_grep` 掃描整個資料夾。
+- 在修改程式碼前，必須先向使用者說明修改邏輯，取得同意後再動手。
+
+## 3. 程式碼品質與相容性
+- 所有的 JavaScript 必須維持原生相容性，並做好 DOM 元素是否存在的防呆檢查（例如 `if (element) ...`）。
+- 保持 HTML 語意化（Semantic HTML），並確保 CSS 具備良好的響應式設計（RWD）。

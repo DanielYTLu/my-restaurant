@@ -261,3 +261,14 @@ displaySettings = {
 - [PWA Guide](https://web.dev/progressive-web-apps/)
 
 Branch Test
+
+## 專案進度與狀態 (2026/08/29)
+
+- **狀態**: 目前專案已完成核心功能開發，包含完整的 CRUD、Supabase 同步、PWA 安裝、拖曳排序與顯示設定。
+- **最新進度**: 
+  - 完成群組管理與排序邏輯。
+  - 整合 Supabase 即時資料同步。
+  - 完成基礎 PWA 設定與 Service Worker 快取。
+  - 支援主題配色切換 (亮色/暗色)。
+- **待辦事項**:
+  - 無明顯待辦事項，目前為維護與穩定運行階段。

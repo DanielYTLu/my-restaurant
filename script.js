@@ -92,6 +92,621 @@ const supabaseClient =
 // ==================================================
 
 let restaurants = [];
+let currentUser = null;
+let authSessionInitializedFlag = false;
+
+
+function getStorageNamespace() {
+    return currentUser?.id || "guest";
+}
+
+function getRestaurantsStorageKey() {
+    return `restaurants_${getStorageNamespace()}`;
+}
+
+function getRestaurantGroupsStorageKey() {
+    return `restaurantGroups_${getStorageNamespace()}`;
+}
+
+function getCurrentGroupStorageKey() {
+    return `currentGroupId_${getStorageNamespace()}`;
+}
+
+function migrateLegacyGuestStorage() {
+    // 【修改說明】若非登入狀態，跳過 migration 以免觸發 QuotaExceededError (大型 Base64 搬遷)
+    // 我們改用 loadRestaurantsFromLocal 中的 fallback 機制處理資料讀取
+    return;
+
+    if (currentUser !== null) return;
+
+    const pairs = [
+        { oldKey: "restaurants", newKey: getRestaurantsStorageKey() },
+        { oldKey: "restaurantGroups", newKey: getRestaurantGroupsStorageKey() },
+        { oldKey: "currentGroupId", newKey: getCurrentGroupStorageKey() }
+    ];
+
+    pairs.forEach(({ oldKey, newKey }) => {
+        try {
+            if (localStorage.getItem(newKey) !== null) {
+                return;
+            }
+            const oldVal = localStorage.getItem(oldKey);
+            if (oldVal !== null) {
+                localStorage.setItem(newKey, oldVal);
+            }
+        } catch (e) {
+            if (e?.name === "QuotaExceededError" || (e && e.code === 22)) {
+                console.warn(`⚠️ Legacy migration skipped due to LocalStorage quota (${oldKey} -> ${newKey}):`, e);
+            } else {
+                console.error(`❌ Migration error for ${oldKey} -> ${newKey}:`, e);
+            }
+        }
+    });
+}
+let authReloadSequence = 0;
+
+async function initializeAuthSession() {
+    try {
+        const {
+            data: { session },
+            error
+        } = await supabaseClient.auth.getSession();
+
+        if (error) {
+            console.error("❌ 取得 Auth Session 失敗：", error);
+            currentUser = null;
+        } else {
+            currentUser = session?.user || null;
+        }
+
+        console.log("🔒 Auth Session:", currentUser);
+    } catch (err) {
+        console.error("❌ 初始化 Auth Session 發生例外：", err);
+        currentUser = null;
+    } finally {
+        authSessionInitializedFlag = true;
+    }
+}
+
+async function handleAuthUserChanged(user) {
+    currentUser = user || null;
+    console.log("🔄 Auth State Changed:", currentUser);
+    updateAuthUI();
+    await reloadUserScopedLocalData();
+}
+
+async function reloadUserScopedLocalData() {
+    const currentSeq = ++authReloadSequence;
+    try {
+        console.log("🔄 正在重新載入使用者 Scoped 本地資料與狀態：", getStorageNamespace());
+        
+        restaurants = [];
+        restaurantGroups = [];
+        currentGroupId = null;
+
+        migrateLegacyGuestStorage();
+        loadGroupsFromLocal();
+        ensureGroupsInitialized();
+        updateGroupSwitchButton();
+        loadRestaurantsFromLocal();
+
+        if (currentSeq !== authReloadSequence) {
+            console.log("⚡ 偵測到更新的 Auth Reload 請求，放棄本次過期渲染");
+            return;
+        }
+
+        renderRestaurants();
+        console.log("✅ 使用者 Scoped 本地資料重新載入完成");
+    } catch (err) {
+        console.error("❌ 重新載入使用者 Scoped 本地資料發生錯誤：", err);
+    }
+}
+
+
+let isPasswordRecoveryMode = false;
+
+async function forgotPassword(email) {
+    const trimmedEmail = (email || "").trim();
+
+    if (!trimmedEmail) {
+        showToast("請輸入電子郵件", "error");
+        return false;
+    }
+
+    if (!trimmedEmail.includes("@") || !trimmedEmail.includes(".")) {
+        showToast("請輸入有效的電子郵件格式", "error");
+        return false;
+    }
+
+    try {
+        const redirectToUrl = `${window.location.origin}/`;
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(trimmedEmail, {
+            redirectTo: redirectToUrl
+        });
+
+        if (error) {
+            console.error("❌ 寄送重設密碼信失敗：", error);
+            showToast("寄送失敗，請稍後再試", "error");
+            return false;
+        }
+
+        showToast("✅ 重設密碼信已寄出，請檢查您的電子郵件", "success");
+        return true;
+    } catch (err) {
+        console.error("❌ 寄送重設密碼信發生例外：", err);
+        showToast("發生錯誤，請稍後再試", "error");
+        return false;
+    }
+}
+
+supabaseClient.auth.onAuthStateChange((event, session) => {
+    const user = session?.user || null;
+    console.log("🔄 Auth State Changed Event:", event, user);
+
+    if (event === "PASSWORD_RECOVERY") {
+        isPasswordRecoveryMode = true;
+        console.log("🔑 PASSWORD_RECOVERY event received. Entering recovery mode.");
+        history.replaceState({}, "", "/reset-password");
+        handleRoute();
+    }
+
+    if (event === "INITIAL_SESSION") {
+        return;
+    }
+
+    void handleAuthUserChanged(user);
+});
+
+
+
+
+async function login(email, password) {
+    const trimmedEmail = (email || "").trim();
+    const trimmedPassword = password || "";
+
+    if (!trimmedEmail) {
+        showToast("請輸入電子郵件", "error");
+        return;
+    }
+
+    if (!trimmedPassword) {
+        showToast("請輸入密碼", "error");
+        return;
+    }
+
+    try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: trimmedEmail,
+            password: trimmedPassword
+        });
+
+        if (error) {
+            console.error("登入失敗：", error);
+            showToast("電子郵件或密碼錯誤", "error");
+            return;
+        }
+
+        if (data?.user) {
+            currentUser = data.user;
+            showToast("✅ 登入成功", "success");
+
+            history.pushState({}, "", "/");
+            handleRoute();
+        }
+    } catch (err) {
+        console.error("登入發生例外：", err);
+        showToast("登入發生錯誤，請稍後再試", "error");
+    }
+}
+
+async function signup(email, password) {
+    const trimmedEmail = (email || "").trim();
+    const trimmedPassword = password || "";
+
+    if (!trimmedEmail) {
+        showToast("請輸入電子郵件", "error");
+        return;
+    }
+
+    if (!trimmedPassword) {
+        showToast("請輸入密碼", "error");
+        return;
+    }
+
+    if (trimmedPassword.length < 6) {
+        showToast("密碼長度至少需要 6 個字元", "error");
+        return;
+    }
+
+    try {
+        const { data, error } = await supabaseClient.auth.signUp({
+            email: trimmedEmail,
+            password: trimmedPassword
+        });
+
+        if (error) {
+            console.error("註冊失敗：", error);
+            const msg = error.message || "";
+            if (msg.includes("already registered")) {
+                showToast("此電子郵件已被註冊", "error");
+            } else if (msg.includes("valid email")) {
+                showToast("電子郵件格式不正確", "error");
+            } else {
+                showToast("註冊失敗，請稍後再試", "error");
+            }
+            return false;
+        }
+
+        if (data?.user) {
+            if (data.session) {
+                showToast("✅ 註冊成功並已自動登入", "success");
+            } else {
+                showToast("✅ 註冊成功，請檢查您的電子郵件以進行驗證", "success");
+            }
+
+            history.pushState({}, "", "/");
+            handleRoute();
+            return true;
+        }
+    } catch (err) {
+        console.error("註冊發生例外：", err);
+        showToast("註冊發生錯誤，請稍後再試", "error");
+    }
+    return false;
+}
+
+async function logout() {
+    try {
+        const { error } = await supabaseClient.auth.signOut();
+
+        if (error) {
+            console.error("❌ 登出失敗：", error);
+            showToast("登出失敗，請稍後再試", "error");
+            return false;
+        }
+
+        console.log("✅ 登出成功");
+        showToast("已成功登出", "success");
+        return true;
+    } catch (err) {
+        console.error("❌ 登出發生例外：", err);
+        showToast("登出發生錯誤，請稍後再試", "error");
+        return false;
+    }
+}
+
+function updateAuthUI() {
+    const authButtonLabel = document.getElementById("authButtonLabel");
+    const authAccountEmail = document.getElementById("authAccountEmail");
+    const authOpenButton = document.getElementById("authOpenButton");
+
+    if (currentUser) {
+        const email = currentUser.email || "已登入帳號";
+        if (authButtonLabel) authButtonLabel.textContent = email;
+        if (authAccountEmail) authAccountEmail.textContent = email;
+        if (authOpenButton) {
+            authOpenButton.title = `已登入 (${email}) - 點擊管理帳號`;
+        }
+    } else {
+        if (authButtonLabel) authButtonLabel.textContent = "登入";
+        if (authAccountEmail) authAccountEmail.textContent = "user@example.com";
+        if (authOpenButton) {
+            authOpenButton.title = "使用者登入";
+        }
+        const authAccountMenu = document.getElementById("authAccountMenu");
+        if (authAccountMenu) {
+            authAccountMenu.hidden = true;
+            authAccountMenu.setAttribute("aria-hidden", "true");
+        }
+        if (authOpenButton) {
+            authOpenButton.setAttribute("aria-expanded", "false");
+        }
+    }
+}
+
+function handleRoute() {
+    const path = window.location.pathname;
+    const loginView = document.getElementById("loginView");
+    const registerView = document.getElementById("registerView");
+    const forgotView = document.getElementById("forgotView");
+    const recoveryView = document.getElementById("recoveryView");
+    const authModalTitle = document.getElementById("authModalTitle");
+    const authRouteContainer = document.getElementById("authRouteContainer");
+
+    if (!authRouteContainer) return;
+
+    // 隱藏所有 auth view
+    if (loginView) loginView.hidden = true;
+    if (registerView) registerView.hidden = true;
+    if (forgotView) forgotView.hidden = true;
+    if (recoveryView) recoveryView.hidden = true;
+
+    if (path === "/login") {
+        if (loginView) loginView.hidden = false;
+        if (authModalTitle) authModalTitle.textContent = "登入黑白呷";
+        authRouteContainer.hidden = false;
+        document.body.style.overflow = "hidden";
+    } else if (path === "/register") {
+        if (registerView) registerView.hidden = false;
+        if (authModalTitle) authModalTitle.textContent = "註冊黑白呷帳號";
+        authRouteContainer.hidden = false;
+        document.body.style.overflow = "hidden";
+    } else if (path === "/forgot-password") {
+        if (forgotView) forgotView.hidden = false;
+        if (authModalTitle) authModalTitle.textContent = "重設密碼";
+        authRouteContainer.hidden = false;
+        document.body.style.overflow = "hidden";
+    } else if (path === "/reset-password") {
+        if (recoveryView) recoveryView.hidden = false;
+        if (authModalTitle) authModalTitle.textContent = "設定新密碼";
+        authRouteContainer.hidden = false;
+        document.body.style.overflow = "hidden";
+    } else {
+        // 主 App "/"
+        authRouteContainer.hidden = true;
+        document.body.style.overflow = "";
+    }
+}
+
+window.addEventListener("popstate", () => {
+    handleRoute();
+});
+
+window.addEventListener("hashchange", () => {
+    handleRoute();
+});
+
+// 初始化時執行一次
+handleRoute();
+function initializeAuthSystem() {
+    const authOpenButton = document.getElementById("authOpenButton");
+    const authRouteContainer = document.getElementById("authRouteContainer");
+    const closeAuthModal = document.getElementById("closeAuthModal");
+    const loginForm = document.getElementById("loginForm");
+    const loginEmail = document.getElementById("loginEmail");
+    const loginPassword = document.getElementById("loginPassword");
+
+    if (authOpenButton) {
+        authOpenButton.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (currentUser) {
+                const authAccountMenu = document.getElementById("authAccountMenu");
+                if (authAccountMenu) {
+                    const isHidden = authAccountMenu.hidden;
+                    authAccountMenu.hidden = !isHidden;
+                    authAccountMenu.setAttribute("aria-hidden", isHidden ? "false" : "true");
+                    authOpenButton.setAttribute("aria-expanded", isHidden ? "true" : "false");
+                }
+            } else {
+                history.pushState({}, "", "/login");
+                handleRoute();
+            }
+        });
+    }
+
+    const authLogoutButton = document.getElementById("authLogoutButton");
+    if (authLogoutButton) {
+        authLogoutButton.addEventListener("click", async () => {
+            const authAccountMenu = document.getElementById("authAccountMenu");
+            if (authAccountMenu) {
+                authAccountMenu.hidden = true;
+                authAccountMenu.setAttribute("aria-hidden", "true");
+            }
+            if (authOpenButton) {
+                authOpenButton.setAttribute("aria-expanded", "false");
+            }
+            await logout();
+        });
+    }
+
+    document.addEventListener("click", (e) => {
+        const authAccountMenu = document.getElementById("authAccountMenu");
+        const authOpenButton = document.getElementById("authOpenButton");
+        if (authAccountMenu && !authAccountMenu.hidden) {
+            if (!authAccountMenu.contains(e.target) && !authOpenButton.contains(e.target)) {
+                authAccountMenu.hidden = true;
+                authAccountMenu.setAttribute("aria-hidden", "true");
+                if (authOpenButton) authOpenButton.setAttribute("aria-expanded", "false");
+            }
+        }
+    });
+
+    updateAuthUI();
+
+    if (closeAuthModal) {
+        closeAuthModal.addEventListener("click", () => {
+            const authOpenButton = document.getElementById("authOpenButton");
+            if (authOpenButton) {
+                authOpenButton.focus();
+            }
+            history.pushState({}, "", "/");
+            handleRoute();
+        });
+    }
+    const registerForm = document.getElementById("registerForm");
+    const registerEmail = document.getElementById("registerEmail");
+    const registerPassword = document.getElementById("registerPassword");
+    const registerConfirmPassword = document.getElementById("registerConfirmPassword");
+    const registerSubmitButton = document.getElementById("registerSubmitButton");
+    const loginView = document.getElementById("loginView");
+    const registerView = document.getElementById("registerView");
+    const switchToRegisterButton = document.getElementById("switchToRegisterButton");
+    const switchToLoginButton = document.getElementById("switchToLoginButton");
+    const authModalTitle = document.getElementById("authModalTitle");
+    const forgotForm = document.getElementById("forgotForm");
+
+
+    if (switchToRegisterButton && loginView && registerView && authModalTitle) {
+        switchToRegisterButton.addEventListener("click", () => {
+            loginView.hidden = true;
+            registerView.hidden = false;
+            authModalTitle.textContent = "註冊黑白呷帳號";
+        });
+    }
+
+    if (switchToLoginButton && loginView && registerView && authModalTitle) {
+        switchToLoginButton.addEventListener("click", () => {
+            registerView.hidden = true;
+            loginView.hidden = false;
+            authModalTitle.textContent = "登入黑白呷";
+        });
+    }
+
+    if (registerForm) {
+        registerForm.addEventListener("submit", async e => {
+            e.preventDefault();
+            const email = registerEmail?.value || "";
+            const password = registerPassword?.value || "";
+            const confirmPassword = registerConfirmPassword?.value || "";
+
+            if (!email || !password || !confirmPassword) {
+                showToast("請填寫所有欄位", "error");
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showToast("兩次輸入的密碼不一致", "error");
+                return;
+            }
+
+            if (registerSubmitButton) {
+                registerSubmitButton.disabled = true;
+            }
+
+            try {
+                await signup(email, password);
+            } finally {
+                if (registerSubmitButton) {
+                    registerSubmitButton.disabled = false;
+                }
+            }
+        });
+    }
+
+
+    if (loginForm) {
+        loginForm.addEventListener("submit", async e => {
+            e.preventDefault();
+            const email = loginEmail?.value || "";
+            const password = loginPassword?.value || "";
+            await login(email, password);
+        });
+    }
+
+    const forgotEmail = document.getElementById("forgotEmail");
+    const forgotSubmitButton = document.getElementById("forgotSubmitButton");
+    const forgotView = document.getElementById("forgotView");
+    const switchToForgotButton = document.getElementById("switchToForgotButton");
+    const backToLoginButton = document.getElementById("backToLoginButton");
+
+    if (switchToForgotButton && loginView && forgotView && authModalTitle) {
+        switchToForgotButton.addEventListener("click", () => {
+            loginView.hidden = true;
+            forgotView.hidden = false;
+            authModalTitle.textContent = "重設密碼";
+        });
+    }
+
+    if (backToLoginButton && loginView && forgotView && authModalTitle) {
+        backToLoginButton.addEventListener("click", () => {
+            forgotView.hidden = true;
+            loginView.hidden = false;
+            authModalTitle.textContent = "登入黑白呷";
+        });
+    }
+
+    if (forgotForm) {
+        forgotForm.addEventListener("submit", async e => {
+            e.preventDefault();
+            const email = forgotEmail?.value || "";
+
+            if (!email) {
+                showToast("請輸入電子郵件", "error");
+                return;
+            }
+
+            if (forgotSubmitButton) {
+                forgotSubmitButton.disabled = true;
+            }
+
+            try {
+                const success = await forgotPassword(email);
+                if (success && forgotEmail) {
+                    forgotEmail.value = "";
+                }
+            } finally {
+                if (forgotSubmitButton) {
+                    forgotSubmitButton.disabled = false;
+                }
+            }
+        });
+    }
+
+    const recoveryForm = document.getElementById("recoveryForm");
+    const recoveryNewPassword = document.getElementById("recoveryNewPassword");
+    const recoveryConfirmPassword = document.getElementById("recoveryConfirmPassword");
+    const recoverySubmitButton = document.getElementById("recoverySubmitButton");
+
+    if (recoveryForm) {
+        recoveryForm.addEventListener("submit", async e => {
+            e.preventDefault();
+            const newPassword = recoveryNewPassword?.value || "";
+            const confirmPassword = recoveryConfirmPassword?.value || "";
+
+            if (!newPassword || !confirmPassword) {
+                showToast("請填寫所有欄位", "error");
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showToast("密碼長度至少需要 6 個字元", "error");
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showToast("兩次輸入的密碼不一致", "error");
+                return;
+            }
+
+            if (recoverySubmitButton) {
+                recoverySubmitButton.disabled = true;
+            }
+
+            try {
+                const { error } = await supabaseClient.auth.updateUser({
+                    password: newPassword
+                });
+
+                if (error) {
+                    console.error("❌ 更新密碼失敗：", error);
+                    showToast(error.message || "更新密碼失敗，請稍後再試", "error");
+                    return;
+                }
+
+                showToast("✅ 密碼更新成功", "success");
+                isPasswordRecoveryMode = false;
+
+                if (recoveryNewPassword) recoveryNewPassword.value = "";
+                if (recoveryConfirmPassword) recoveryConfirmPassword.value = "";
+
+                history.pushState({}, "", "/");
+                handleRoute();
+            } catch (err) {
+                console.error("❌ 更新密碼發生例外：", err);
+                showToast("發生錯誤，請稍後再試", "error");
+            } finally {
+                if (recoverySubmitButton) {
+                    recoverySubmitButton.disabled = false;
+                }
+            }
+        });
+    }
+}
+
+
+
+
+
 
 let randomPickerResultId = null;
 // ==================================================
@@ -416,13 +1031,13 @@ function generateUuid() {
 }
 
 function saveGroupsLocal() {
-    localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(restaurantGroups));
-    localStorage.setItem(CURRENT_GROUP_STORAGE_KEY, currentGroupId || "");
+    localStorage.setItem(getRestaurantGroupsStorageKey(), JSON.stringify(restaurantGroups));
+    localStorage.setItem(getCurrentGroupStorageKey(), currentGroupId || "");
 }
 
 function loadGroupsFromLocal() {
     try {
-        const saved = JSON.parse(localStorage.getItem(GROUPS_STORAGE_KEY) || "[]");
+        const saved = JSON.parse(localStorage.getItem(getRestaurantGroupsStorageKey()) || "[]");
 
         restaurantGroups = Array.isArray(saved)
             ? saved
@@ -438,7 +1053,7 @@ function loadGroupsFromLocal() {
         restaurantGroups = [];
     }
 
-    currentGroupId = localStorage.getItem(CURRENT_GROUP_STORAGE_KEY) || null;
+    currentGroupId = localStorage.getItem(getCurrentGroupStorageKey()) || null;
 }
 
 function getUncategorizedGroupId() {
@@ -455,8 +1070,15 @@ function getUncategorizedGroupId() {
 }
 
 function ensureGroupsInitialized() {
-    if (restaurantGroups.length === 0) {
-        getUncategorizedGroupId();
+    if (restaurantGroups.length === 0 || !restaurantGroups.some(g => g.name === UNCATEGORIZED_GROUP_NAME)) {
+        if (!restaurantGroups.some(g => g.name === UNCATEGORIZED_GROUP_NAME)) {
+            restaurantGroups.unshift({
+                id: "uncategorized-default",
+                name: UNCATEGORIZED_GROUP_NAME,
+                created_at: null
+            });
+            saveGroupsLocal();
+        }
     }
 
     const validIds = new Set(restaurantGroups.map(group => group.id));
@@ -802,6 +1424,18 @@ async function initialize() {
     console.log("🚀 餐廳管理系統啟動");
 
     // ==================================================
+    // 初始化 Supabase Auth Session
+    // ==================================================
+
+    await initializeAuthSession();
+
+    // ==================================================
+    // 執行舊版 Guest Storage 遷移（若新 Namespace 尚無資料）
+    // ==================================================
+
+    migrateLegacyGuestStorage();
+
+    // ==================================================
     // 先載入群組（地區隔離層）
     // ==================================================
 
@@ -841,12 +1475,27 @@ async function initialize() {
         finishAppStartup();
     }
 
+        // 取得 key
+        const storageKey = getRestaurantsStorageKey();
+        let rawData = localStorage.getItem(storageKey);
+
+        // 【Guest Fallback 機制】
+        // 若為 Guest 且沒有資料，嘗試讀取原始 restaurants key
+        if (storageKey === "restaurants_guest" && (rawData === null || rawData === "[]")) {
+            const oldData = localStorage.getItem("restaurants");
+            if (oldData) {
+                rawData = oldData;
+            }
+        }
+
+        const savedRestaurants = JSON.parse(rawData || "[]");
+
 }
 
 function loadRestaurantsFromLocal() {
     try {
         const savedRestaurants = JSON.parse(
-            localStorage.getItem("restaurants") || "[]"
+            localStorage.getItem(getRestaurantsStorageKey()) || "[]"
         );
 
         restaurants = Array.isArray(savedRestaurants)
@@ -1320,7 +1969,7 @@ function mapRestaurantToSupabase(
 function saveRestaurantsLocal() {
 
     localStorage.setItem(
-        "restaurants",
+        getRestaurantsStorageKey(),
         JSON.stringify(restaurants)
     );
 
@@ -6239,6 +6888,8 @@ function openFullscreenMenuImage(
 // Initialize Menu Features
 // ==================================================
 
+initializeAuthSystem();
+
 initializeTheme();
 initializeDisplaySettings();
 initializeGroupSwitching();
@@ -7455,6 +8106,7 @@ function showSkeletonLoading() {
         </article>
     `).join("");
 }
+
 
 function finishAppStartup() {
     const splash = document.getElementById("appSplash");

@@ -143,6 +143,25 @@
                     title="顯示與排序"
                 >
                     ⚙️
+                <div class="auth-account-wrapper">
+                    <button
+                        id="authOpenButton"
+                        class="auth-open-button"
+                        type="button"
+                        aria-label="使用者登入與帳號"
+                        title="使用者登入與帳號"
+                        aria-expanded="false"
+                        aria-haspopup="true"
+                    >
+                        <span class="auth-button-icon">👤</span>
+                        <span id="authButtonLabel" class="auth-button-label">登入</span>
+                    </button>
+                    <div id="authAccountMenu" class="auth-account-menu" hidden aria-hidden="true">
+                        <div class="auth-account-title">已登入</div>
+                        <div class="auth-account-email" id="authAccountEmail">user@example.com</div>
+                        <button type="button" id="authLogoutButton" class="auth-logout-button">登出</button>
+                    </div>
+                </div>
                 </button>
 
             </div>
@@ -1136,6 +1155,102 @@
 
 
     
+    <!-- ==================================================
+         Auth Modal
+    =================================================== -->
+
+    <div
+        id="authRouteContainer"
+        class="auth-route-container"
+        hidden
+        aria-hidden="true"
+    >
+        <div class="auth-route-sheet">
+
+            <div class="auth-route-header">
+                <h2 id="authModalTitle"></h2>
+
+                <button
+                    type="button"
+                    id="closeAuthModal"
+                    class="auth-close-button"
+                    aria-label="關閉"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="auth-route-body">
+
+                <!-- Login View -->
+                <div id="loginView" class="auth-view" hidden>
+                    <form id="loginForm">
+                        <label class="form-field">
+                            <span>電子郵件</span>
+                            <input type="email" id="loginEmail" required>
+                        </label>
+                        <label class="form-field">
+                            <span>密碼</span>
+                            <input type="password" id="loginPassword" required>
+                        </label>
+                        <button type="submit" class="form-submit-button">登入</button>
+                    </form>
+                    <button type="button" id="switchToRegisterButton" class="auth-text-button">註冊帳號</button>
+                    <button type="button" id="switchToForgotButton" class="auth-text-button">忘記密碼？</button>
+                </div>
+
+                <!-- Register View -->
+                <div id="registerView" class="auth-view" hidden>
+                    <form id="registerForm">
+                        <label class="form-field">
+                            <span>電子郵件</span>
+                            <input type="email" id="registerEmail" required>
+                        </label>
+                        <label class="form-field">
+                            <span>密碼</span>
+                            <input type="password" id="registerPassword" required>
+                        </label>
+                        <label class="form-field">
+                            <span>確認密碼</span>
+                            <input type="password" id="registerConfirmPassword" required>
+                        </label>
+                        <button type="submit" id="registerSubmitButton" class="form-submit-button">註冊</button>
+                    </form>
+                    <button type="button" id="switchToLoginButton" class="auth-text-button">已有帳號？登入</button>
+                </div>
+
+                <!-- Forgot View -->
+                <div id="forgotView" class="auth-view" hidden>
+                    <form id="forgotForm">
+                        <label class="form-field">
+                            <span>電子郵件</span>
+                            <input type="email" id="forgotEmail" required>
+                        </label>
+                        <button type="submit" id="forgotSubmitButton" class="form-submit-button">發送重設密碼信</button>
+                    </form>
+                    <button type="button" id="backToLoginButton" class="auth-text-button">返回登入</button>
+                </div>
+
+                <!-- Recovery View -->
+                <div id="recoveryView" class="auth-view" hidden>
+                    <form id="recoveryForm">
+                        <label class="form-field">
+                            <span>新密碼</span>
+                            <input type="password" id="recoveryNewPassword" required>
+                        </label>
+                        <label class="form-field">
+                            <span>確認新密碼</span>
+                            <input type="password" id="recoveryConfirmPassword" required>
+                        </label>
+                        <button type="submit" id="recoverySubmitButton" class="form-submit-button">更新密碼</button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
 <!-- ==================================================
      Global Loading
 ================================================== -->
