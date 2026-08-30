@@ -64,7 +64,7 @@ img {
 
 
 /* ==================================================
-   Header
+   Header (Mobile First - 3 Tiers)
 ================================================== */
 
 .app-header {
@@ -94,17 +94,30 @@ img {
     margin: 0 auto;
 
     padding:
-        22px 20px 18px;
+        14px 16px 12px;
 
     display: flex;
 
-    align-items: center;
+    flex-direction: column;
 
-    justify-content: space-between;
+    gap: 10px;
 
 }
 
-.display-settings-button,
+.header-tier-1 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.header-tier-2 {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+}
+
 .announcements-button {
     width: 42px;
     height: 42px;
@@ -119,7 +132,6 @@ img {
     position: relative;
 }
 
-.display-settings-button:active,
 .announcements-button:active {
     transform: scale(0.96);
 }
@@ -134,11 +146,11 @@ img {
     display: flex;
     align-items: center;
     gap: 5px;
-    height: 42px;
-    max-width: 148px;
-    padding: 0 13px;
+    height: 40px;
+    max-width: 100%;
+    padding: 0 14px;
     border: 1px solid #e1e1dc;
-    border-radius: 21px;
+    border-radius: 20px;
     background: white;
     color: #333;
     font-size: 13px;
@@ -205,7 +217,7 @@ img {
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    width: min(240px, calc(100vw - 32px));
+    width: min(220px, calc(100vw - 32px));
     background: var(--surface, #ffffff);
     border: 1px solid var(--line, #e5e5e0);
     border-radius: 14px;
@@ -232,29 +244,25 @@ img {
     font-weight: 600;
     color: #202020;
     letter-spacing: 0;
-}
-
-.auth-account-email {
-    margin-top: 3px;
-    font-size: 12px;
-    font-weight: 500;
-    color: #888;
     word-break: break-all;
 }
 
 .auth-account-actions {
     border-top: 1px solid var(--line, #e5e5e0);
     padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
-.auth-logout-button {
+.auth-menu-item-button {
     width: 100%;
-    min-height: 36px;
+    min-height: 38px;
     padding: 0 10px;
     border: none;
     border-radius: 10px;
     background: transparent;
-    color: #d93838;
+    color: #333;
     font-size: 13px;
     font-weight: 600;
     display: inline-flex;
@@ -264,6 +272,15 @@ img {
     cursor: pointer;
     transition: background-color var(--motion-fast);
 }
+
+.auth-menu-item-button:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.auth-logout-button {
+    color: #d93838;
+}
+
 
 .auth-logout-button:hover {
     background: #fff5f5;
