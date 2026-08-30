@@ -143,6 +143,7 @@
                     title="顯示與排序"
                 >
                     ⚙️
+                </button>
                 <div class="auth-account-wrapper">
                     <button
                         id="authOpenButton"
@@ -157,12 +158,15 @@
                         <span id="authButtonLabel" class="auth-button-label">登入</span>
                     </button>
                     <div id="authAccountMenu" class="auth-account-menu" hidden aria-hidden="true">
-                        <div class="auth-account-title">已登入</div>
-                        <div class="auth-account-email" id="authAccountEmail">user@example.com</div>
-                        <button type="button" id="authLogoutButton" class="auth-logout-button">登出</button>
+                        <div class="auth-account-info">
+                            <div class="auth-account-title">👤 已登入</div>
+                            <div class="auth-account-email" id="authAccountEmail">user@example.com</div>
+                        </div>
+                        <div class="auth-account-actions">
+                            <button type="button" id="authLogoutButton" class="auth-logout-button">🚪 登出</button>
+                        </div>
                     </div>
                 </div>
-                </button>
 
             </div>
 
