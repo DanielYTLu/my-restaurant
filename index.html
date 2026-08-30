@@ -98,20 +98,56 @@
 
         <div class="header-inner">
 
-            <div>
+            <div class="header-tier-1">
+                <div class="header-brand">
+                    <p class="eyebrow">
+                        MY RESTAURANTS
+                    </p>
+                    <h1>
+                        我的餐廳
+                    </h1>
+                </div>
 
-                <p class="eyebrow">
-                    MY RESTAURANTS
-                </p>
+                <div class="header-actions">
+                    <button
+                        id="announcementsButton"
+                        class="announcements-button"
+                        type="button"
+                        aria-label="查看公告"
+                        title="查看公告"
+                    >
+                        📢
+                        <span id="announcementsBadge" class="announcements-badge hidden"></span>
+                    </button>
 
-                <h1>
-                    我的餐廳
-                </h1>
-
+                    <div class="auth-account-wrapper">
+                        <button
+                            id="authOpenButton"
+                            class="auth-open-button"
+                            type="button"
+                            aria-label="使用者登入與帳號"
+                            title="使用者登入與帳號"
+                            aria-expanded="false"
+                            aria-haspopup="true"
+                        >
+                            <span class="auth-button-icon">👤</span>
+                            <span id="authButtonLabel" class="auth-button-label">登入</span>
+                        </button>
+                        <div id="authAccountMenu" class="auth-account-menu" hidden aria-hidden="true">
+                            <div class="auth-account-info">
+                                <div class="auth-account-title" id="authAccountTitle">👤 使用者</div>
+                            </div>
+                            <div class="auth-account-actions">
+                                <button type="button" id="authProfileButton" class="auth-menu-item-button">👤 個人資料</button>
+                                <button type="button" id="authSettingsButton" class="auth-menu-item-button">⚙️ 設定</button>
+                                <button type="button" id="authLogoutButton" class="auth-menu-item-button auth-logout-button">🚪 登出</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="header-actions">
-
+            <div class="header-tier-2">
                 <button
                     id="groupSwitchButton"
                     class="group-switch-button"
@@ -123,51 +159,6 @@
                     <span id="groupSwitchLabel" class="group-switch-label">群組</span>
                     <span class="group-switch-caret">▾</span>
                 </button>
-
-                <button
-                    id="announcementsButton"
-                    class="announcements-button"
-                    type="button"
-                    aria-label="查看公告"
-                    title="查看公告"
-                >
-                    📢
-                    <span id="announcementsBadge" class="announcements-badge hidden"></span>
-                </button>
-
-                <button
-                    id="displaySettingsButton"
-                    class="display-settings-button"
-                    type="button"
-                    aria-label="顯示與排序"
-                    title="顯示與排序"
-                >
-                    ⚙️
-                </button>
-                <div class="auth-account-wrapper">
-                    <button
-                        id="authOpenButton"
-                        class="auth-open-button"
-                        type="button"
-                        aria-label="使用者登入與帳號"
-                        title="使用者登入與帳號"
-                        aria-expanded="false"
-                        aria-haspopup="true"
-                    >
-                        <span class="auth-button-icon">👤</span>
-                        <span id="authButtonLabel" class="auth-button-label">登入</span>
-                    </button>
-                    <div id="authAccountMenu" class="auth-account-menu" hidden aria-hidden="true">
-                        <div class="auth-account-info">
-                            <div class="auth-account-title">👤 已登入</div>
-                            <div class="auth-account-email" id="authAccountEmail">user@example.com</div>
-                        </div>
-                        <div class="auth-account-actions">
-                            <button type="button" id="authLogoutButton" class="auth-logout-button">🚪 登出</button>
-                        </div>
-                    </div>
-                </div>
-
             </div>
 
         </div>
@@ -361,6 +352,56 @@
     </main>
 
 
+    <div id="profileModal" class="modal-overlay">
+
+        <div class="display-settings-sheet profile-sheet">
+
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">PROFILE</p>
+                    <h2>個人資料</h2>
+                </div>
+                <button id="closeProfileModal" class="modal-close" type="button">×</button>
+            </div>
+
+            <div class="display-settings-content profile-content">
+                <form id="profileForm" class="restaurant-form profile-form">
+
+                    <label class="form-field">
+                        <span>電子郵件</span>
+                        <input
+                            type="email"
+                            id="profileEmail"
+                            class="form-input"
+                            disabled
+                        >
+                    </label>
+
+                    <label class="form-field">
+                        <span>暱稱 (1～3 個字)</span>
+                        <input
+                            type="text"
+                            id="profileNickname"
+                            class="form-input"
+                            maxlength="3"
+                            placeholder="請輸入暱稱"
+                        >
+                        <span class="form-hint" style="font-size: 12px; color: var(--muted, #666); margin-top: 4px; display: block;">暱稱限制 1～3 個字，不支援空白與超過 3 個字</span>
+                    </label>
+
+                    <div class="group-form-actions" style="margin-top: 20px;">
+                        <button type="button" id="cancelProfileButton" class="group-form-cancel-button">取消</button>
+                        <button type="submit" id="submitProfileButton" class="form-submit-button group-form-submit-button">儲存變更</button>
+                    </div>
+
+                </form>
+            </div>
+
+        </div>
+
+    </div>
+
+
     <div id="announcementsModal" class="modal-overlay">
         <div class="announcements-sheet">
             <div class="modal-header">
@@ -482,6 +523,13 @@
                         maxlength="20"
                         required
                     >
+                </label>
+                <label class="form-field">
+                    <span>公開設定</span>
+                    <select id="groupVisibilitySelect" class="form-input">
+                        <option value="private">私人 (僅自己可見)</option>
+                        <option value="public">公開 (所有人可見)</option>
+                    </select>
                 </label>
 
                 <div class="group-form-actions">

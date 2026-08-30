@@ -143,6 +143,21 @@ function migrateLegacyGuestStorage() {
         }
     });
 }
+function cleanupLegacyStorage() {
+    const legacyKey = "restaurants";
+    const currentKey = getRestaurantsStorageKey();
+
+    // 只有在新的儲存鍵已有資料且不等於 legacyKey 時，才考慮清除舊鍵
+    if (currentKey !== legacyKey && localStorage.getItem(currentKey) && localStorage.getItem(legacyKey)) {
+        try {
+            console.log("🧹 發現 Legacy LocalStorage，執行清除：", legacyKey);
+            localStorage.removeItem(legacyKey);
+        } catch (e) {
+            console.error("❌ 清除 Legacy LocalStorage 失敗：", e);
+        }
+    }
+}
+
 let authReloadSequence = 0;
 
 async function initializeAuthSession() {
@@ -178,17 +193,28 @@ async function handleAuthUserChanged(user) {
 async function reloadUserScopedLocalData() {
     const currentSeq = ++authReloadSequence;
     try {
-        console.log("🔄 正在重新載入使用者 Scoped 本地資料與狀態：", getStorageNamespace());
+        console.log("🔄 正在重新載入使用者 Scoped 資料與狀態 (包含雲端)：", getStorageNamespace());
         
         restaurants = [];
         restaurantGroups = [];
         currentGroupId = null;
 
+        cleanupLegacyStorage();
         migrateLegacyGuestStorage();
+
+        // 核心修正：加入 Cloud Hydration
         loadGroupsFromLocal();
+        await loadGroupsFromSupabase();
         ensureGroupsInitialized();
         updateGroupSwitchButton();
-        loadRestaurantsFromLocal();
+
+        // 載入餐廳
+        try {
+            await loadRestaurants();
+        } catch (e) {
+            console.warn("⚠️ 雲端餐廳載入失敗，改用本地快取", e);
+            loadRestaurantsFromLocal();
+        }
 
         if (currentSeq !== authReloadSequence) {
             console.log("⚡ 偵測到更新的 Auth Reload 請求，放棄本次過期渲染");
@@ -196,9 +222,9 @@ async function reloadUserScopedLocalData() {
         }
 
         renderRestaurants();
-        console.log("✅ 使用者 Scoped 本地資料重新載入完成");
+        console.log("✅ 使用者 Scoped 本地與雲端資料重新載入完成");
     } catch (err) {
-        console.error("❌ 重新載入使用者 Scoped 本地資料發生錯誤：", err);
+        console.error("❌ 重新載入使用者 Scoped 資料發生錯誤：", err);
     }
 }
 
@@ -290,6 +316,9 @@ async function login(email, password) {
             currentUser = data.user;
             showToast("✅ 登入成功", "success");
 
+            // 確保資料載入完成再切換
+            await handleAuthUserChanged(data.user);
+
             history.pushState({}, "", "/");
             handleRoute();
         }
@@ -375,31 +404,47 @@ async function logout() {
     }
 }
 
+// 統一關閉選單並處理焦點的輔助函式
+function closeAuthAccountMenu() {
+    const authAccountMenu = document.getElementById("authAccountMenu");
+    const authOpenButton = document.getElementById("authOpenButton");
+
+    if (authAccountMenu && !authAccountMenu.hidden) {
+        // 在隱藏前將焦點移回開啟按鈕，避免 aria-hidden 警告
+        if (authOpenButton) {
+            authOpenButton.focus();
+            authOpenButton.setAttribute("aria-expanded", "false");
+        }
+        authAccountMenu.hidden = true;
+        authAccountMenu.setAttribute("aria-hidden", "true");
+    }
+}
+
 function updateAuthUI() {
     const authButtonLabel = document.getElementById("authButtonLabel");
-    const authAccountEmail = document.getElementById("authAccountEmail");
+    const authAccountTitle = document.getElementById("authAccountTitle");
     const authOpenButton = document.getElementById("authOpenButton");
 
     if (currentUser) {
-        const email = currentUser.email || "已登入帳號";
-        if (authButtonLabel) authButtonLabel.textContent = email;
-        if (authAccountEmail) authAccountEmail.textContent = email;
+        let nickname = "使用者";
+        const metaNickname = currentUser.user_metadata?.nickname;
+        if (metaNickname && typeof metaNickname === "string" && metaNickname.trim() !== "") {
+            nickname = metaNickname.trim().slice(0, 3);
+        }
+
+        if (authButtonLabel) authButtonLabel.textContent = nickname;
+        if (authAccountTitle) authAccountTitle.textContent = `👤 ${nickname}`;
         if (authOpenButton) {
-            authOpenButton.title = `已登入 (${email}) - 點擊管理帳號`;
+            authOpenButton.title = `已登入 (${nickname}) - 點擊管理帳號`;
         }
     } else {
         if (authButtonLabel) authButtonLabel.textContent = "登入";
-        if (authAccountEmail) authAccountEmail.textContent = "user@example.com";
+        if (authAccountTitle) authAccountTitle.textContent = "👤 使用者";
         if (authOpenButton) {
             authOpenButton.title = "使用者登入";
         }
-        const authAccountMenu = document.getElementById("authAccountMenu");
         if (authAccountMenu) {
-            authAccountMenu.hidden = true;
-            authAccountMenu.setAttribute("aria-hidden", "true");
-        }
-        if (authOpenButton) {
-            authOpenButton.setAttribute("aria-expanded", "false");
+            closeAuthAccountMenu();
         }
     }
 }
@@ -443,6 +488,15 @@ function handleRoute() {
         document.body.style.overflow = "hidden";
     } else {
         // 主 App "/"
+        if (authRouteContainer && authRouteContainer.contains(document.activeElement)) {
+            // 先強制將焦點從容器內容移出
+            document.activeElement?.blur();
+            
+            const authOpenButton = document.getElementById("authOpenButton");
+            if (authOpenButton) {
+                authOpenButton.focus();
+            }
+        }
         authRouteContainer.hidden = true;
         document.body.style.overflow = "";
     }
@@ -483,18 +537,114 @@ function initializeAuthSystem() {
             }
         });
     }
+    const authProfileButton = document.getElementById("authProfileButton");
+    const profileModal = document.getElementById("profileModal");
+    const closeProfileModal = document.getElementById("closeProfileModal");
+    const cancelProfileButton = document.getElementById("cancelProfileButton");
+    const profileForm = document.getElementById("profileForm");
+    const profileEmail = document.getElementById("profileEmail");
+    const profileNickname = document.getElementById("profileNickname");
+    const submitProfileButton = document.getElementById("submitProfileButton");
+
+    const closeProfileModalHandler = () => {
+        if (profileModal) {
+            profileModal.classList.remove("show");
+        }
+        if (profileForm) {
+            profileForm.reset();
+        }
+    };
+
+    if (authProfileButton) {
+        authProfileButton.addEventListener("click", (e) => {
+            e.stopPropagation();
+            closeAuthAccountMenu();
+
+            if (currentUser) {
+                if (profileEmail) profileEmail.value = currentUser.email || "";
+                const currentMetaNickname = currentUser.user_metadata?.nickname || "";
+                if (profileNickname) profileNickname.value = currentMetaNickname;
+            }
+
+            if (profileModal) {
+                profileModal.classList.add("show");
+                if (profileNickname) profileNickname.focus();
+            }
+        });
+    }
+
+    if (closeProfileModal) {
+        closeProfileModal.addEventListener("click", closeProfileModalHandler);
+    }
+    if (cancelProfileButton) {
+        cancelProfileButton.addEventListener("click", closeProfileModalHandler);
+    }
+    if (profileModal) {
+        profileModal.addEventListener("click", (e) => {
+            if (e.target === profileModal) {
+                closeProfileModalHandler();
+            }
+        });
+    }
+
+    if (profileForm) {
+        profileForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const rawNickname = profileNickname?.value || "";
+            const trimmedNickname = rawNickname.trim();
+
+            if (!trimmedNickname) {
+                showToast("暱稱不能為空白", "error");
+                if (profileNickname) profileNickname.focus();
+                return;
+            }
+
+            if (trimmedNickname.length > 3) {
+                showToast("暱稱限制 1～3 個字", "error");
+                if (profileNickname) profileNickname.focus();
+                return;
+            }
+
+            if (submitProfileButton) {
+                submitProfileButton.disabled = true;
+            }
+
+            try {
+                const { data, error } = await supabaseClient.auth.updateUser({
+                    data: { nickname: trimmedNickname }
+                });
+
+                if (error) {
+                    console.error("❌ 更新個人資料失敗：", error);
+                    showToast(error.message || "更新個人資料失敗，請稍後再試", "error");
+                    return;
+                }
+
+                if (data && data.user) {
+                    currentUser = data.user;
+                }
+
+                updateAuthUI();
+                showToast("✅ 個人資料更新成功", "success");
+                closeProfileModalHandler();
+            } catch (err) {
+                console.error("❌ 更新個人資料發生例外：", err);
+                showToast("發生錯誤，請稍後再試", "error");
+            } finally {
+                if (submitProfileButton) {
+                    submitProfileButton.disabled = false;
+                }
+            }
+        });
+    }
+
+
+
 
     const authLogoutButton = document.getElementById("authLogoutButton");
     if (authLogoutButton) {
         authLogoutButton.addEventListener("click", async () => {
-            const authAccountMenu = document.getElementById("authAccountMenu");
-            if (authAccountMenu) {
-                authAccountMenu.hidden = true;
-                authAccountMenu.setAttribute("aria-hidden", "true");
-            }
-            if (authOpenButton) {
-                authOpenButton.setAttribute("aria-expanded", "false");
-            }
+            closeAuthAccountMenu();
             await logout();
         });
     }
@@ -504,9 +654,7 @@ function initializeAuthSystem() {
         const authOpenButton = document.getElementById("authOpenButton");
         if (authAccountMenu && !authAccountMenu.hidden) {
             if (!authAccountMenu.contains(e.target) && !authOpenButton.contains(e.target)) {
-                authAccountMenu.hidden = true;
-                authAccountMenu.setAttribute("aria-hidden", "true");
-                if (authOpenButton) authOpenButton.setAttribute("aria-expanded", "false");
+                closeAuthAccountMenu();
             }
         }
     });
@@ -1147,11 +1295,40 @@ function getCurrentGroupName() {
     return group?.name || UNCATEGORIZED_GROUP_NAME;
 }
 
+function getCurrentGroup() {
+    return restaurantGroups.find(candidate => candidate.id === currentGroupId);
+}
+
+function canEditCurrentGroup() {
+    const group = getCurrentGroup();
+    // 如果是「未分類」或找不到群組，視為使用者自己的，允許修改
+    if (!group || group.id === "uncategorized-default" || group.name === UNCATEGORIZED_GROUP_NAME) {
+        return true;
+    }
+    // 檢查是否擁有該群組 (user_id 匹配)
+    return currentUser && group.user_id === currentUser.id;
+}
+
 function updateGroupSwitchButton() {
     const label = document.getElementById("groupSwitchLabel");
-
+    const addRestaurantButton = document.getElementById("addRestaurantButton");
+    const editOrderButton = document.getElementById("editOrderButton");
+    
     if (label) {
-        label.textContent = getCurrentGroupName();
+        let name = getCurrentGroupName();
+        const isReadonly = !canEditCurrentGroup();
+        if (isReadonly) {
+            name += " 👁️ 唯讀";
+        }
+        label.textContent = name;
+    }
+
+    if (addRestaurantButton) {
+        addRestaurantButton.hidden = !canEditCurrentGroup();
+    }
+
+    if (editOrderButton) {
+        editOrderButton.hidden = !canEditCurrentGroup();
     }
 }
 
@@ -1197,17 +1374,28 @@ async function loadGroupsFromSupabase() {
         }
 
         if (Array.isArray(data) && data.length > 0) {
-            restaurantGroups = data.map(row => ({
+            let fetchedGroups = data.map(row => ({
                 id: String(row.id),
                 name: row.name || UNCATEGORIZED_GROUP_NAME,
+                visibility: row.visibility || "private",
+                user_id: row.user_id || null,
                 created_at: row.created_at || null
             }));
+
+            // 未登入時只保留 public 群組，或若本機已有自己建立的群組也保留
+            if (!currentUser) {
+                fetchedGroups = fetchedGroups.filter(g => g.visibility === "public" || g.name === UNCATEGORIZED_GROUP_NAME);
+            }
+
+            restaurantGroups = fetchedGroups;
 
             // 確保從 Supabase 載入時，若雲端沒有「未分類」，在前端記憶體與本地補上一個預設未分類（不強行寫入雲端破壞 schema）
             if (!restaurantGroups.some(g => g.name === UNCATEGORIZED_GROUP_NAME)) {
                 restaurantGroups.unshift({
                     id: "uncategorized-default",
                     name: UNCATEGORIZED_GROUP_NAME,
+                    visibility: "private",
+                    user_id: currentUser?.id || null,
                     created_at: null
                 });
             }
@@ -1220,6 +1408,8 @@ async function loadGroupsFromSupabase() {
                 restaurantGroups = [{
                     id: "uncategorized-default",
                     name: UNCATEGORIZED_GROUP_NAME,
+                    visibility: "private",
+                    user_id: currentUser?.id || null,
                     created_at: null
                 }];
                 saveGroupsLocal();
@@ -1238,6 +1428,8 @@ async function createGroupInSupabase(group) {
     const payload = {
         id: group.id,
         name: group.name,
+        visibility: group.visibility || "private",
+        user_id: currentUser?.id || null,
         created_at: group.created_at || new Date().toISOString()
     };
 
@@ -1283,17 +1475,21 @@ async function createGroupInSupabase(group) {
     }
 }
 
-async function renameGroupInSupabase(id, name) {
+async function updateGroupInSupabase(id, name, visibility) {
     const group = restaurantGroups.find(candidate => String(candidate.id) === String(id));
     if (group && group.name === UNCATEGORIZED_GROUP_NAME) {
-        console.warn("⚠️ 系統保留群組「未分類」不可重新命名。");
+        console.warn("⚠️ 系統保留群組「未分類」不可修改。");
         return false;
     }
 
     try {
+        const updateData = {};
+        if (name !== undefined) updateData.name = name;
+        if (visibility !== undefined) updateData.visibility = visibility;
+
         const { error } = await supabaseClient
             .from("restaurant_groups")
-            .update({ name })
+            .update(updateData)
             .eq("id", id);
 
         if (error) {
@@ -1310,6 +1506,10 @@ async function renameGroupInSupabase(id, name) {
         console.error("❌ 群組更新錯誤：", error);
         return false;
     }
+}
+
+async function renameGroupInSupabase(id, name) {
+    return await updateGroupInSupabase(id, name, undefined);
 }
 
 
@@ -1967,12 +2167,22 @@ function mapRestaurantToSupabase(
 // ==================================================
 
 function saveRestaurantsLocal() {
-
-    localStorage.setItem(
-        getRestaurantsStorageKey(),
-        JSON.stringify(restaurants)
-    );
-
+    try {
+        localStorage.setItem(
+            getRestaurantsStorageKey(),
+            JSON.stringify(restaurants)
+        );
+    } catch (error) {
+        if (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+            console.error("❌ LocalStorage 已滿，無法儲存餐廳資料：", error);
+            // 嘗試顯示給使用者，但不干擾主要流程
+            if (typeof showToast === "function") {
+                showToast("⚠️ 本機儲存空間已滿，部分離線資料可能無法同步儲存。", "error");
+            }
+        } else {
+            console.error("❌ 儲存餐廳資料時發生未預期錯誤：", error);
+        }
+    }
 }
 
 function cleanDisplayOrder() {
@@ -2576,6 +2786,25 @@ article.innerHTML = `
             >
                 查看資訊
             </button>
+
+            ${
+                canEditCurrentGroup()
+                    ? `
+                        <button
+                            class="edit-button"
+                            data-id="${restaurant.id}"
+                        >
+                            編輯
+                        </button>
+                        <button
+                            class="delete-button"
+                            data-id="${restaurant.id}"
+                        >
+                            刪除
+                        </button>
+                    `
+                    : ""
+            }
 
         </div>
 
@@ -3680,41 +3909,44 @@ console.log(
                 )
                 : null;
 
-        const menuImages = (await Promise.all(
-            selectedMenuFiles.map(async (file, index) => {
-
-                if (file) {
-                    return readFileAsDataUrl(file);
-                }
-
-                if (menuInputs[index]?.dataset.menuRemoved === "true") {
-                    return null;
-                }
-
-                return existingRestaurant?.menuImages?.[index] || "";
-
-            })
-        )).filter(Boolean);
-
-        let weeklyHours;
+        let restaurantImage;
+        let menuImages;
 
         try {
-            weeklyHours = readWeeklyHoursFromEditor();
+            // 處理主圖
+            if (restaurantImageInput.files && restaurantImageInput.files.length > 0) {
+                if (currentUser) {
+                    restaurantImage = await uploadImageToSupabaseStorage(restaurantImageInput.files[0]);
+                } else {
+                    restaurantImage = await readFileAsDataUrl(restaurantImageInput.files[0]);
+                }
+            } else if (restaurantImageInput.dataset.imageRemoved === "true") {
+                restaurantImage = "";
+            } else {
+                restaurantImage = existingRestaurant?.image || "";
+            }
+
+            // 處理菜單圖片
+            menuImages = await Promise.all(
+                selectedMenuFiles.map(async (file, index) => {
+                    if (file) {
+                        return currentUser ? await uploadImageToSupabaseStorage(file) : await readFileAsDataUrl(file);
+                    }
+                    if (menuInputs[index]?.dataset.menuRemoved === "true") {
+                        return null;
+                    }
+                    return existingRestaurant?.menuImages?.[index] || "";
+                })
+            );
+            menuImages = menuImages.filter(Boolean);
+        } catch (error) {
+            AppLoading.hide();
+            console.error("❌ 圖片處理失敗，儲存中止：", error);
+            alert("圖片上傳失敗，請稍後再試。");
+            return;
         }
-        catch (error) {
-    AppLoading.hide();
 
-    alert(error.message);
-    return;
-}
-
-        const restaurantImage =
-            restaurantImageInput.files &&
-            restaurantImageInput.files.length > 0
-                ? await readFileAsDataUrl(restaurantImageInput.files[0])
-                : restaurantImageInput.dataset.imageRemoved === "true"
-                    ? ""
-                    : existingRestaurant?.image || "";
+        let weeklyHours;
 
         const restaurantData = {
 
@@ -4602,9 +4834,12 @@ updateMenuPreview(
 // Delete Restaurant
 // ==================================================
 
-async function deleteRestaurant(
-    id
-) {
+async function deleteRestaurant(id) {
+    if (!canEditCurrentGroup()) {
+        showToast("唯讀模式，無法刪除餐廳");
+        return;
+    }
+
 
     const restaurant =
         restaurants.find(
@@ -7271,11 +7506,26 @@ randomPickerResultId = null;
 function initializeDisplaySettings() {
     const closeButton = document.getElementById("closeDisplaySettings");
     const editOrderButton = document.getElementById("editOrderButton");
+    const authSettingsButton = document.getElementById("authSettingsButton");
 
-    displaySettingsButton.addEventListener("click", () => {
+    const openDisplaySettingsModal = () => {
         displaySettingsModal.classList.add("show");
         updateDisplaySettingsControls();
-    });
+        closeAuthAccountMenu();
+    };
+
+    if (displaySettingsButton) {
+        displaySettingsButton.addEventListener("click", () => {
+            openDisplaySettingsModal();
+        });
+    }
+
+    if (authSettingsButton) {
+        authSettingsButton.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openDisplaySettingsModal();
+        });
+    }
 
     closeButton.addEventListener("click", () => {
         displaySettingsModal.classList.remove("show");
@@ -7369,6 +7619,7 @@ function initializeGroupSwitching() {
     const cancelGroupFormButton = document.getElementById("cancelGroupFormButton");
     const groupForm = document.getElementById("groupForm");
     const groupNameInput = document.getElementById("groupNameInput");
+    const groupVisibilitySelect = document.getElementById("groupVisibilitySelect");
     const groupFormTitle = document.getElementById("groupFormTitle");
     const submitGroupFormButton = document.getElementById("submitGroupFormButton");
 
@@ -7380,6 +7631,7 @@ function initializeGroupSwitching() {
         groupFormModal.classList.remove("show");
         groupForm.reset();
         delete groupForm.dataset.editingGroupId;
+        if (groupVisibilitySelect) groupVisibilitySelect.value = "private";
     }
 
     // --------------------------------------------------
@@ -7410,6 +7662,7 @@ function initializeGroupSwitching() {
         groupFormTitle.textContent = "新增群組";
         submitGroupFormButton.textContent = "建立";
         groupNameInput.value = "";
+        if (groupVisibilitySelect) groupVisibilitySelect.value = "private";
         groupSheetModal.classList.remove("show");
         groupFormModal.classList.add("show");
         groupNameInput.focus();
@@ -7432,6 +7685,7 @@ function initializeGroupSwitching() {
         event.preventDefault();
 
         const name = groupNameInput.value.trim();
+        const visibility = groupVisibilitySelect ? groupVisibilitySelect.value : "private";
 
         if (!name) {
             return;
@@ -7441,21 +7695,22 @@ function initializeGroupSwitching() {
 
         if (editingGroupId) {
 
-            // 修改群組名稱（id 保持不變）
+            // 修改群組名稱與隱私設定（id 保持不變）
             const group = restaurantGroups.find(candidate => candidate.id === editingGroupId);
 
             if (group) {
                 if (group.name === UNCATEGORIZED_GROUP_NAME) {
-                    alert("「未分類」群組不能重新命名。");
+                    alert("「未分類」群組不能修改。");
                     closeGroupFormModalHandler();
                     return;
                 }
                 group.name = name;
+                group.visibility = visibility;
                 saveGroupsLocal();
-                renameGroupInSupabase(editingGroupId, name);
+                updateGroupInSupabase(editingGroupId, name, visibility);
             }
 
-            showToast("✅ 群組名稱已更新", "success");
+            showToast("✅ 群組設定已更新", "success");
 
         }
         else {
@@ -7465,6 +7720,8 @@ function initializeGroupSwitching() {
             const newGroup = {
                 id: groupUuid,
                 name,
+                visibility,
+                user_id: currentUser?.id || null,
                 created_at: new Date().toISOString()
             };
 
@@ -7472,7 +7729,7 @@ function initializeGroupSwitching() {
             currentGroupId = groupUuid;
             saveGroupsLocal();
 
-            if (supabaseConnected) {
+            if (currentUser) {
                 createGroupInSupabase(newGroup).then(supabaseId => {
                     if (supabaseId) {
                         const targetGroup = restaurantGroups.find(g => g.id === groupUuid);
@@ -7503,7 +7760,7 @@ function initializeGroupSwitching() {
         closeGroupFormModalHandler();
         updateGroupSwitchButton();
         renderRestaurants();
-randomPickerResultId = null;
+        randomPickerResultId = null;
 
     });
 
@@ -7516,62 +7773,38 @@ function renderGroupList() {
         return;
     }
 
-    groupList.innerHTML = restaurantGroups.map(group => {
+    // 分類群組：
+    // 「我的群組」＝ group.user_id === currentUser.id，包含自己的 public / private 群組（若 currentUser 為空，則本地建立的未指定 user_id 且非別人的群組也歸類在內）
+    // 「公開群組」＝其他使用者的 visibility === 'public'，且自己的公開群組不要重複出現在「公開群組」
 
-        const isUncategorized =
-            group.name === UNCATEGORIZED_GROUP_NAME;
+    const myGroups = restaurantGroups.filter(group => {
+        if (group.name === UNCATEGORIZED_GROUP_NAME) return true;
+        if (!currentUser) return !group.user_id || group.user_id === "local";
+        return group.user_id === currentUser.id;
+    });
 
-        return `
-            <div
-                class="group-list-item ${group.id === currentGroupId ? "active" : ""}"
-                data-group-id="${escapeHtml(group.id)}"
-            >
+    const publicGroups = restaurantGroups.filter(group => {
+        if (group.name === UNCATEGORIZED_GROUP_NAME) return false;
+        const isPublic = group.visibility === "public";
+        const isMine = currentUser ? (group.user_id === currentUser.id) : (!group.user_id || group.user_id === "local");
+        return isPublic && !isMine;
+    });
 
-                <span class="group-list-check">
-                    ${group.id === currentGroupId ? "✓" : ""}
-                </span>
+    let htmlOutput = "";
 
-                <button
-                    type="button"
-                    class="group-list-name"
-                    data-select-group-id="${escapeHtml(group.id)}"
-                >
-                    ${escapeHtml(group.name)}
-                </button>
+    // 渲染「我的群組」
+    if (myGroups.length > 0) {
+        htmlOutput += `<div class="group-section-title" style="font-size: 11px; font-weight: 700; color: var(--muted, #888); padding: 8px 12px 4px; letter-spacing: 0.5px; text-transform: uppercase;">我的群組</div>`;
+        htmlOutput += myGroups.map(group => renderSingleGroupItem(group)).join("");
+    }
 
-                ${
-                    !isUncategorized
-                        ? `
-                            <button
-                                type="button"
-                                class="group-rename-button"
-                                data-rename-group-id="${escapeHtml(group.id)}"
-                                aria-label="修改群組名稱"
-                            >
-                                ✎
-                            </button>
-                        `
-                        : ""
-                }
+    // 渲染「公開群組」
+    if (publicGroups.length > 0) {
+        htmlOutput += `<div class="group-section-title" style="font-size: 11px; font-weight: 700; color: var(--muted, #888); padding: 16px 12px 4px; letter-spacing: 0.5px; text-transform: uppercase;">公開群組</div>`;
+        htmlOutput += publicGroups.map(group => renderSingleGroupItem(group, true)).join("");
+    }
 
-                ${
-                    !isUncategorized
-                        ? `
-                            <button
-                                type="button"
-                                class="group-delete-button"
-                                data-delete-group-id="${escapeHtml(group.id)}"
-                                aria-label="刪除群組"
-                            >
-                                🗑️
-                            </button>
-                        `
-                        : ""
-                }
-
-            </div>
-        `;
-    }).join("");
+    groupList.innerHTML = htmlOutput;
 
 
     // ==================================================
@@ -7631,7 +7864,79 @@ function renderGroupList() {
         });
 
 }
+
+function renderSingleGroupItem(group, isOthersPublic = false) {
+    const isUncategorized = group.name === UNCATEGORIZED_GROUP_NAME;
+    const isOwner = currentUser ? (group.user_id === currentUser.id) : (!group.user_id || group.user_id === "local");
+    const isReadonly = isOthersPublic;
+    const canEdit = !isUncategorized && isOwner && !isOthersPublic;
+
+    // 狀態標籤
+    const badges = [];
+    if (group.visibility === "public") {
+        badges.push(`<span style="font-size: 10px; background: rgba(0,128,0,0.1); color: green; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">🌐 公開</span>`);
+    } else {
+        badges.push(`<span style="font-size: 10px; background: rgba(128,128,128,0.1); color: gray; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">🔒 私人</span>`);
+    }
+
+    if (isReadonly) {
+        badges.push(`<span style="font-size: 10px; background: rgba(0,122,255,0.1); color: #007aff; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">👁️ 唯讀</span>`);
+    }
+
+    return `
+        <div
+            class="group-list-item ${group.id === currentGroupId ? "active" : ""}"
+            data-group-id="${escapeHtml(group.id)}"
+        >
+
+            <span class="group-list-check">
+                ${group.id === currentGroupId ? "✓" : ""}
+            </span>
+
+            <button
+                type="button"
+                class="group-list-name"
+                data-select-group-id="${escapeHtml(group.id)}"
+            >
+                ${escapeHtml(group.name)} ${!isUncategorized ? badges.join("") : ""}
+            </button>
+
+
+            ${
+                canEdit
+                    ? `
+                        <button
+                            type="button"
+                            class="group-rename-button"
+                            data-rename-group-id="${escapeHtml(group.id)}"
+                            aria-label="修改群組名稱與設定"
+                            title="修改群組名稱與設定"
+                        >
+                            ✎
+                        </button>
+                        <button
+                            type="button"
+                            class="group-delete-button"
+                            data-delete-group-id="${escapeHtml(group.id)}"
+                            aria-label="刪除群組"
+                            title="刪除群組"
+                        >
+                            🗑️
+                        </button>
+                    `
+                    : ""
+            }
+
+        </div>
+    `;
+}
 function switchGroup(groupId) {
+    // 檢查是否可以切換到此群組（檢查公開/私人邏輯）
+    const targetGroup = restaurantGroups.find(g => g.id === groupId);
+    
+    // 如果群組存在且是私人的，且不是目前使用者擁有的，則顯示唯讀提示 (在後續實作中透過 UI 顯示，此處僅處理切換行為)
+    // 這裡我們允許切換以進入唯讀模式
+    
     const groupSheetModal = document.getElementById("groupSheetModal");
 
     if (!groupId || groupId === currentGroupId) {
@@ -7658,7 +7963,7 @@ function switchGroup(groupId) {
 
     updateGroupSwitchButton();
     renderRestaurants();
-randomPickerResultId = null;
+    randomPickerResultId = null;
 }
 
 function openRenameGroupModal(groupId) {
@@ -7698,6 +8003,10 @@ function openRenameGroupModal(groupId) {
 // ==================================================
 
 async function deleteGroup(groupId) {
+    if (!canEditCurrentGroup()) {
+        showToast("唯讀模式，無法刪除群組");
+        return;
+    }
 
     const group =
         restaurantGroups.find(
@@ -7858,6 +8167,14 @@ async function deleteGroup(groupId) {
     if (
         supabaseConnected
     ) {
+        // [修正] 在執行 CUD 操作前，強制確認當前 Session 是否有效，避免因過期導致變為 anon
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        
+        if (sessionError || !session || !currentUser || session.user.id !== currentUser.id) {
+            console.error("❌ 群組刪除失敗：Session 無效或不匹配", { sessionError, hasSession: !!session, hasUser: !!currentUser });
+            alert("目前登入狀態已過期，請重新登入後再嘗試刪除。");
+            return;
+        }
 
         try {
 
