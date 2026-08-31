@@ -1337,7 +1337,9 @@ function updateGroupSwitchButton() {
     }
 
     if (addRestaurantButton) {
-        addRestaurantButton.hidden = !canEditCurrentGroup();
+        // 未登入狀態或唯讀群組下直接隱藏新增餐廳按鈕
+        addRestaurantButton.hidden = !currentUser || !canEditCurrentGroup();
+        addRestaurantButton.style.display = (!currentUser || !canEditCurrentGroup()) ? "none" : "";
     }
 
     if (editOrderButton) {
