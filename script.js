@@ -8399,18 +8399,23 @@ function renderEmptyState(restaurantData) {
         ? `沒有符合「${escapeHtml(keyword)}」的結果`
         : isFavoriteEmpty
             ? "點擊店家上的愛心，收藏喜歡的店家"
-            : "新增你常去的店家，開始建立自己的店家清單";
+            : currentUser
+                ? "新增你常去的店家，開始建立自己的店家清單"
+                : "目前尚無店家，請先登入帳號以新增店家";
+
+    const showButton = !isSearchEmpty && (isFavoriteEmpty || currentUser);
+    const buttonText = isFavoriteEmpty ? "查看全部店家" : "＋ 新增店家";
 
     restaurantList.innerHTML = `
         <div class="empty-state">
             <div class="empty-icon">${icon}</div>
             <h2>${title}</h2>
             <p>${description}</p>
-            ${isSearchEmpty ? "" : `
+            ${showButton ? `
                 <button type="button" class="empty-state-button" data-empty-action="${isFavoriteEmpty ? "all" : "add"}">
-                    ${isFavoriteEmpty ? "查看全部店家" : "＋ 新增店家"}
+                    ${buttonText}
                 </button>
-            `}
+            ` : ""}
         </div>
     `;
 
@@ -8418,6 +8423,10 @@ function renderEmptyState(restaurantData) {
 
     action?.addEventListener("click", () => {
         if (action.dataset.emptyAction === "add") {
+            if (!currentUser) {
+                alert("⚠️ 請先登入帳號後再新增餐廳！");
+                return;
+            }
             addRestaurantButton.click();
             return;
         }
