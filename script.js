@@ -4184,6 +4184,11 @@ randomPickerResultId = null;
 
                 if (supabaseConnected) {
 
+                    if (!currentUser) {
+                        alert("⚠️ 請先登入帳號後再新增餐廳！");
+                        return;
+                    }
+
                     const saved =
                         await createRestaurantInSupabase(
                             newRestaurant
