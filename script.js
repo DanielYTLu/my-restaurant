@@ -2170,7 +2170,10 @@ function mapRestaurantToSupabase(
         // ==================================================
 
         group_id:
-            restaurant.groupId || null
+            restaurant.groupId || null,
+
+        user_id:
+            currentUser?.id || null
 
     };
 
@@ -2801,25 +2804,6 @@ article.innerHTML = `
             >
                 查看資訊
             </button>
-
-            ${
-                canEditCurrentGroup()
-                    ? `
-                        <button
-                            class="edit-button"
-                            data-id="${restaurant.id}"
-                        >
-                            編輯
-                        </button>
-                        <button
-                            class="delete-button"
-                            data-id="${restaurant.id}"
-                        >
-                            刪除
-                        </button>
-                    `
-                    : ""
-            }
 
         </div>
 
