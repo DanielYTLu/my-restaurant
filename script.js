@@ -424,6 +424,7 @@ function updateAuthUI() {
     const authButtonLabel = document.getElementById("authButtonLabel");
     const authAccountTitle = document.getElementById("authAccountTitle");
     const authOpenButton = document.getElementById("authOpenButton");
+    const addGroupButton = document.getElementById("addGroupButton");
 
     if (currentUser) {
         let nickname = "使用者";
@@ -437,16 +438,24 @@ function updateAuthUI() {
         if (authOpenButton) {
             authOpenButton.title = `已登入 (${nickname}) - 點擊管理帳號`;
         }
+        if (addGroupButton) {
+            addGroupButton.style.display = "";
+        }
     } else {
         if (authButtonLabel) authButtonLabel.textContent = "登入";
         if (authAccountTitle) authAccountTitle.textContent = "👤 使用者";
         if (authOpenButton) {
             authOpenButton.title = "使用者登入";
         }
+        if (addGroupButton) {
+            addGroupButton.style.display = "none";
+        }
         if (authAccountMenu) {
             closeAuthAccountMenu();
         }
     }
+    // 更新群組與餐廳編輯按鈕狀態
+    updateGroupSwitchButton();
 }
 
 function handleRoute() {
@@ -1300,13 +1309,17 @@ function getCurrentGroup() {
 }
 
 function canEditCurrentGroup() {
+    // 如果未登入，完全禁止修改與新增
+    if (!currentUser) {
+        return false;
+    }
     const group = getCurrentGroup();
     // 如果是「未分類」或找不到群組，視為使用者自己的，允許修改
     if (!group || group.id === "uncategorized-default" || group.name === UNCATEGORIZED_GROUP_NAME) {
         return true;
     }
     // 檢查是否擁有該群組 (user_id 匹配)
-    return currentUser && group.user_id === currentUser.id;
+    return group.user_id === currentUser.id;
 }
 
 function updateGroupSwitchButton() {
@@ -7663,6 +7676,10 @@ function initializeGroupSwitching() {
     // --------------------------------------------------
 
     addGroupButton?.addEventListener("click", () => {
+        if (!currentUser) {
+            alert("⚠️ 請先登入帳號後再建立群組！");
+            return;
+        }
         delete groupForm.dataset.editingGroupId;
         groupFormTitle.textContent = "新增群組";
         submitGroupFormButton.textContent = "建立";
