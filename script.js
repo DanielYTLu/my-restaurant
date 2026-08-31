@@ -424,6 +424,7 @@ function updateAuthUI() {
     const authButtonLabel = document.getElementById("authButtonLabel");
     const authAccountTitle = document.getElementById("authAccountTitle");
     const authOpenButton = document.getElementById("authOpenButton");
+    const addGroupButton = document.getElementById("addGroupButton");
 
     if (currentUser) {
         let nickname = "使用者";
@@ -437,16 +438,24 @@ function updateAuthUI() {
         if (authOpenButton) {
             authOpenButton.title = `已登入 (${nickname}) - 點擊管理帳號`;
         }
+        if (addGroupButton) {
+            addGroupButton.style.display = "";
+        }
     } else {
         if (authButtonLabel) authButtonLabel.textContent = "登入";
         if (authAccountTitle) authAccountTitle.textContent = "👤 使用者";
         if (authOpenButton) {
             authOpenButton.title = "使用者登入";
         }
+        if (addGroupButton) {
+            addGroupButton.style.display = "none";
+        }
         if (authAccountMenu) {
             closeAuthAccountMenu();
         }
     }
+    // 更新群組與餐廳編輯按鈕狀態
+    updateGroupSwitchButton();
 }
 
 function handleRoute() {
@@ -1300,13 +1309,17 @@ function getCurrentGroup() {
 }
 
 function canEditCurrentGroup() {
+    // 如果未登入，完全禁止修改與新增
+    if (!currentUser) {
+        return false;
+    }
     const group = getCurrentGroup();
     // 如果是「未分類」或找不到群組，視為使用者自己的，允許修改
     if (!group || group.id === "uncategorized-default" || group.name === UNCATEGORIZED_GROUP_NAME) {
         return true;
     }
     // 檢查是否擁有該群組 (user_id 匹配)
-    return currentUser && group.user_id === currentUser.id;
+    return group.user_id === currentUser.id;
 }
 
 function updateGroupSwitchButton() {
@@ -1324,7 +1337,9 @@ function updateGroupSwitchButton() {
     }
 
     if (addRestaurantButton) {
-        addRestaurantButton.hidden = !canEditCurrentGroup();
+        // 未登入狀態或唯讀群組下直接隱藏新增餐廳按鈕
+        addRestaurantButton.hidden = !currentUser || !canEditCurrentGroup();
+        addRestaurantButton.style.display = (!currentUser || !canEditCurrentGroup()) ? "none" : "";
     }
 
     if (editOrderButton) {
@@ -4183,6 +4198,11 @@ randomPickerResultId = null;
                 // --------------------------------------------------
 
                 if (supabaseConnected) {
+
+                    if (!currentUser) {
+                        alert("⚠️ 請先登入帳號後再新增餐廳！");
+                        return;
+                    }
 
                     const saved =
                         await createRestaurantInSupabase(
@@ -7658,6 +7678,10 @@ function initializeGroupSwitching() {
     // --------------------------------------------------
 
     addGroupButton?.addEventListener("click", () => {
+        if (!currentUser) {
+            alert("⚠️ 請先登入帳號後再建立群組！");
+            return;
+        }
         delete groupForm.dataset.editingGroupId;
         groupFormTitle.textContent = "新增群組";
         submitGroupFormButton.textContent = "建立";
@@ -8375,18 +8399,23 @@ function renderEmptyState(restaurantData) {
         ? `沒有符合「${escapeHtml(keyword)}」的結果`
         : isFavoriteEmpty
             ? "點擊店家上的愛心，收藏喜歡的店家"
-            : "新增你常去的店家，開始建立自己的店家清單";
+            : currentUser
+                ? "新增你常去的店家，開始建立自己的店家清單"
+                : "目前尚無店家，請先登入帳號以新增店家";
+
+    const showButton = !isSearchEmpty && (isFavoriteEmpty || currentUser);
+    const buttonText = isFavoriteEmpty ? "查看全部店家" : "＋ 新增店家";
 
     restaurantList.innerHTML = `
         <div class="empty-state">
             <div class="empty-icon">${icon}</div>
             <h2>${title}</h2>
             <p>${description}</p>
-            ${isSearchEmpty ? "" : `
+            ${showButton ? `
                 <button type="button" class="empty-state-button" data-empty-action="${isFavoriteEmpty ? "all" : "add"}">
-                    ${isFavoriteEmpty ? "查看全部店家" : "＋ 新增店家"}
+                    ${buttonText}
                 </button>
-            `}
+            ` : ""}
         </div>
     `;
 
@@ -8394,6 +8423,10 @@ function renderEmptyState(restaurantData) {
 
     action?.addEventListener("click", () => {
         if (action.dataset.emptyAction === "add") {
+            if (!currentUser) {
+                alert("⚠️ 請先登入帳號後再新增餐廳！");
+                return;
+            }
             addRestaurantButton.click();
             return;
         }
