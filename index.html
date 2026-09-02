@@ -1211,6 +1211,8 @@
                     </form>
                     <button type="button" id="switchToRegisterButton" class="auth-text-button">註冊帳號</button>
                     <button type="button" id="switchToForgotButton" class="auth-text-button">忘記密碼？</button>
+                        <button type="button" id="switchToResendButton" class="auth-text-button">重新發送驗證信</button>
+
                 </div>
 
                 <!-- Register View -->
@@ -1220,6 +1222,11 @@
                             <span>電子郵件</span>
                             <input type="email" id="registerEmail" required>
                         </label>
+                        <label class="form-field">
+                            <span>暱稱 (1~3個字)</span>
+                            <input type="text" id="registerNickname" required maxlength="3" placeholder="請輸入暱稱">
+                        </label>
+
                         <label class="form-field">
                             <span>密碼</span>
                             <input type="password" id="registerPassword" required>
@@ -1244,6 +1251,19 @@
                     </form>
                     <button type="button" id="backToLoginButton" class="auth-text-button">返回登入</button>
                 </div>
+
+                <!-- Resend Verification View -->
+                <div id="resendView" class="auth-view" hidden>
+                    <form id="resendForm">
+                        <label class="form-field">
+                            <span>電子郵件</span>
+                            <input type="email" id="resendEmail" required placeholder="請輸入註冊時的電子郵件">
+                        </label>
+                        <button type="submit" id="resendSubmitButton" class="form-submit-button">重新發送驗證信</button>
+                    </form>
+                    <button type="button" id="backToLoginFromResendButton" class="auth-text-button">返回登入</button>
+                </div>
+
 
                 <!-- Recovery View -->
                 <div id="recoveryView" class="auth-view" hidden>

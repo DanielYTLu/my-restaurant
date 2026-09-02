@@ -99,7 +99,14 @@ export async function login(email, password) {
 
         if (error) {
             console.error("登入失敗：", error);
-            showToast("電子郵件或密碼錯誤", "error");
+            const msg = error.message || "";
+            if (msg.includes("Email not confirmed") || msg.includes("not confirmed")) {
+                showToast("⚠️ 您的帳號尚未完成 Email 驗證，請先至信箱點擊驗證連結！", "error");
+            } else if (msg.includes("Invalid login credentials")) {
+                showToast("電子郵件或密碼錯誤", "error");
+            } else {
+                showToast(msg || "登入失敗", "error");
+            }
             return;
         }
 
@@ -121,13 +128,23 @@ export async function login(email, password) {
     }
 }
 
-// Signup function
-export async function signup(email, password) {
+export async function signup(email, password, nickname) {
     const trimmedEmail = (email || "").trim();
     const trimmedPassword = password || "";
+    const trimmedNickname = (nickname || "").trim();
 
     if (!trimmedEmail) {
         showToast("請輸入電子郵件", "error");
+        return;
+    }
+
+    if (!trimmedNickname) {
+        showToast("請輸入暱稱", "error");
+        return;
+    }
+
+    if (trimmedNickname.length > 3) {
+        showToast("暱稱限制 1～3 個字", "error");
         return;
     }
 
@@ -144,7 +161,12 @@ export async function signup(email, password) {
     try {
         const { data, error } = await supabaseClient.auth.signUp({
             email: trimmedEmail,
-            password: trimmedPassword
+            password: trimmedPassword,
+            options: {
+                data: {
+                    nickname: trimmedNickname
+                }
+            }
         });
 
         if (error) {
@@ -155,20 +177,28 @@ export async function signup(email, password) {
             } else if (msg.includes("valid email")) {
                 showToast("電子郵件格式不正確", "error");
             } else {
-                showToast("註冊失敗，請稍後再試", "error");
+                showToast(msg || "註冊失敗，請稍後再試", "error");
             }
             return false;
         }
 
         if (data?.user) {
-            if (data.session) {
-                showToast("✅ 註冊成功並已自動登入", "success");
-            } else {
-                showToast("✅ 註冊成功，請檢查您的電子郵件以進行驗證", "success");
-            }
+            showToast("✅ 註冊成功！驗證信已發送，請至信箱點擊連結後登入。", "success");
+            
+            // 切換回登入視圖
+            const registerView = document.getElementById("registerView");
+            const loginView = document.getElementById("loginView");
+            const authModalTitle = document.getElementById("authModalTitle");
+            const loginEmail = document.getElementById("loginEmail");
 
-            history.pushState({}, "", "/");
-            handleRoute();
+            if (registerView && loginView && authModalTitle) {
+                registerView.hidden = true;
+                loginView.hidden = false;
+                authModalTitle.textContent = "登入黑白呷";
+                if (loginEmail) {
+                    loginEmail.value = trimmedEmail;
+                }
+            }
             return true;
         }
     } catch (err) {
@@ -239,6 +269,45 @@ export async function forgotPassword(email) {
         return false;
     }
 }
+// Resend verification email function
+export async function resendVerificationEmail(email) {
+    const trimmedEmail = (email || "").trim();
+
+    if (!trimmedEmail) {
+        showToast("請輸入電子郵件", "error");
+        return false;
+    }
+
+    if (!trimmedEmail.includes("@") || !trimmedEmail.includes(".")) {
+        showToast("請輸入有效的電子郵件格式", "error");
+        return false;
+    }
+
+    try {
+        const redirectToUrl = `${window.location.origin}/`;
+        const { error } = await supabaseClient.auth.resend({
+            type: 'signup',
+            email: trimmedEmail,
+            options: {
+                emailRedirectTo: redirectToUrl
+            }
+        });
+
+        if (error) {
+            console.error("❌ 重新發送驗證信失敗：", error);
+            showToast(error.message || "發送失敗，請稍後再試", "error");
+            return false;
+        }
+
+        showToast("✅ 驗證信已重新發送，請檢查您的電子郵件", "success");
+        return true;
+    } catch (err) {
+        console.error("❌ 重新發送驗證信發生例外：", err);
+        showToast("發生錯誤，請稍後再試", "error");
+        return false;
+    }
+}
+
 
 // Update user profile
 export async function updateUserProfile(nickname) {
@@ -344,6 +413,8 @@ function handleRoute() {
     const registerView = document.getElementById("registerView");
     const forgotView = document.getElementById("forgotView");
     const recoveryView = document.getElementById("recoveryView");
+    const resendView = document.getElementById("resendView");
+
     const authModalTitle = document.getElementById("authModalTitle");
     const authRouteContainer = document.getElementById("authRouteContainer");
 
@@ -353,6 +424,8 @@ function handleRoute() {
     if (loginView) loginView.hidden = true;
     if (registerView) registerView.hidden = true;
     if (forgotView) forgotView.hidden = true;
+    if (resendView) resendView.hidden = true;
+
     if (recoveryView) recoveryView.hidden = true;
 
     if (path === "/login") {
@@ -368,6 +441,12 @@ function handleRoute() {
     } else if (path === "/forgot-password") {
         if (forgotView) forgotView.hidden = false;
         if (authModalTitle) authModalTitle.textContent = "重設密碼";
+    } else if (path === "/resend-verification") {
+        if (resendView) resendView.hidden = false;
+        if (authModalTitle) authModalTitle.textContent = "重新發送驗證信";
+        authRouteContainer.hidden = false;
+        document.body.style.overflow = "hidden";
+
         authRouteContainer.hidden = false;
         document.body.style.overflow = "hidden";
     } else if (path === "/reset-password") {
@@ -537,6 +616,7 @@ export function initializeAuthSystem() {
     const registerEmail = document.getElementById("registerEmail");
     const registerPassword = document.getElementById("registerPassword");
     const registerConfirmPassword = document.getElementById("registerConfirmPassword");
+    const registerNickname = document.getElementById("registerNickname");
     const registerSubmitButton = document.getElementById("registerSubmitButton");
     const loginView = document.getElementById("loginView");
     const registerView = document.getElementById("registerView");
@@ -567,9 +647,22 @@ export function initializeAuthSystem() {
             const email = registerEmail?.value || "";
             const password = registerPassword?.value || "";
             const confirmPassword = registerConfirmPassword?.value || "";
+            const nickname = registerNickname?.value || "";
 
-            if (!email || !password || !confirmPassword) {
+            if (!email || !nickname || !password || !confirmPassword) {
                 showToast("請填寫所有欄位", "error");
+                return;
+            }
+
+            const trimmedNick = nickname.trim();
+            if (!trimmedNick) {
+                showToast("請輸入暱稱", "error");
+                if (registerNickname) registerNickname.focus();
+                return;
+            }
+            if (trimmedNick.length > 3) {
+                showToast("暱稱限制 1～3 個字", "error");
+                if (registerNickname) registerNickname.focus();
                 return;
             }
 
@@ -583,7 +676,7 @@ export function initializeAuthSystem() {
             }
 
             try {
-                await signup(email, password);
+                await signup(email, password, trimmedNick);
             } finally {
                 if (registerSubmitButton) {
                     registerSubmitButton.disabled = false;
@@ -622,6 +715,57 @@ export function initializeAuthSystem() {
             authModalTitle.textContent = "登入黑白呷";
         });
     }
+    const resendEmail = document.getElementById("resendEmail");
+    const resendSubmitButton = document.getElementById("resendSubmitButton");
+    const resendView = document.getElementById("resendView");
+    const switchToResendButton = document.getElementById("switchToResendButton");
+    const backToLoginFromResendButton = document.getElementById("backToLoginFromResendButton");
+
+    if (switchToResendButton && loginView && resendView && authModalTitle) {
+        switchToResendButton.addEventListener("click", () => {
+            loginView.hidden = true;
+            resendView.hidden = false;
+            authModalTitle.textContent = "重新發送驗證信";
+        });
+    }
+
+    if (backToLoginFromResendButton && loginView && resendView && authModalTitle) {
+        backToLoginFromResendButton.addEventListener("click", () => {
+            resendView.hidden = true;
+            loginView.hidden = false;
+            authModalTitle.textContent = "登入黑白呷";
+        });
+    }
+
+    const resendForm = document.getElementById("resendForm");
+    if (resendForm) {
+        resendForm.addEventListener("submit", async e => {
+            e.preventDefault();
+            const email = resendEmail?.value || "";
+
+            if (!email) {
+                showToast("請輸入電子郵件", "error");
+                return;
+            }
+
+            if (resendSubmitButton) {
+                resendSubmitButton.disabled = true;
+            }
+
+            try {
+                const success = await resendVerificationEmail(email);
+                if (success && resendEmail) {
+                    resendEmail.value = "";
+                }
+            } finally {
+                if (resendSubmitButton) {
+                    resendSubmitButton.disabled = false;
+                }
+            }
+        });
+    }
+
+
 
     if (forgotForm) {
         forgotForm.addEventListener("submit", async e => {

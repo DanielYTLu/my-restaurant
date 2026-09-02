@@ -20,3 +20,18 @@
 - **精簡回應與極速修改**：回答直奔重點，修改程式碼時僅提供受影響的程式碼片段或透過 Editor 工具局部替換，避免重複重印無關代碼。
 - **並行工具呼叫**：若需要讀取多檔或執行多指令，必須在單一次回應中並行調用，減少無效對話回合數。
 - **任務結束提示**：當一個獨立需求或 Bug 完成時，提醒使用者開啟 New Task，以釋放長對話積累的 Token 負載。
+
+## 5. Gemini 429 自動 Retry
+
+遇到 Gemini API 的 429、RESOURCE_EXHAUSTED 或 quota exceeded：
+
+- 優先讀取 API 回傳的 retryDelay / Retry-After。
+- 不要寫死等待秒數，依每次 API 回傳的最新時間動態等待。
+- 等待結束後自動 Retry 原本 Request。
+- 若再次 429，重新讀取新的 retryDelay。
+- 最多 Retry 3～5 次，避免無限重試。
+- 若沒有 retryDelay，使用逐步增加的等待時間（exponential backoff）。
+- 若屬於每日配額耗盡，停止 Retry 並通知使用者。
+
+核心原則：
+429 → 讀取等待時間 → 等待 → Retry → 重新取得等待時間。
