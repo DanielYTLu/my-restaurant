@@ -13,9 +13,11 @@ import { getCurrentGroupId, canEditCurrentGroup } from './group.js';
 import { getCurrentUser, loadDisplaySettings, saveDisplaySettings } from './storage.js';
 import { ALL_CATEGORIES } from './config.js';
 
+import { startTutorial, initTutorial } from './tutorial.js';
 
 // Global Toast Handler
 const toastContainer = document.getElementById("toastContainer");
+initTutorial();
 
 export function showToast(message, duration = 3000) {
     if (!toastContainer) return;
@@ -52,6 +54,7 @@ const displaySettingsButton = document.getElementById("displaySettingsButton");
 const displaySettingsModal = document.getElementById("displaySettingsModal");
 const orderSettingsModal = document.getElementById("orderSettingsModal");
 const categoryVisibilityModal = document.getElementById("categoryVisibilityModal");
+const authTutorialButton = document.getElementById("authTutorialButton");
 
 // Display settings
 let displaySettings = await loadDisplaySettings();
@@ -341,22 +344,21 @@ export function showSkeletonLoading() {
 }
 
 // Update group switch button
-export function updateGroupSwitchButton(groupName, isReadonly) {
+export function updateGroupSwitchButton(groupName, canEdit) {
     const label = document.getElementById("groupSwitchLabel");
     const addRestaurantButton = document.getElementById("addRestaurantButton");
     const editOrderButton = document.getElementById("editOrderButton");
     
     if (label) {
         let name = groupName;
-        if (isReadonly) {
+        if (!canEdit) {
             name += " 👁️ 唯讀";
         }
         label.textContent = name;
     }
 
     const currentUser = getCurrentUser();
-    const canEdit = currentUser && canEditCurrentGroup();
-
+    
     if (addRestaurantButton) {
         addRestaurantButton.hidden = !canEdit;
         addRestaurantButton.style.display = canEdit ? "" : "none";
@@ -523,6 +525,7 @@ export function initializeDisplaySettings() {
     });
 
     updateDisplaySettingsControls();
+    authTutorialButton?.addEventListener("click", startTutorial);
 }
 
 function updateDisplaySettingsControls() {
