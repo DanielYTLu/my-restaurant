@@ -11,6 +11,8 @@ ios/build/
 android/.gradle/
 android/app/build/
 *.log
+temp.css
+*.tmp
 
 # AI 開發規範與指引 (.clineignore / 開發約束)
 # 本專案「黑白呷 (My Restaurant)」是一個基於 Vanilla JavaScript、Supabase 與 PWA 的網頁應用程式。

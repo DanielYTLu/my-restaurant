@@ -1,153 +1,135 @@
-/* ==================================================
-   Reset
-================================================== */
-
-* {
-
-    box-sizing: border-box;
-
-    margin: 0;
-
-    padding: 0;
-
-}
-
-
-html {
-
-    scroll-behavior: smooth;
-
-}
-
-
-body {
-
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        "Noto Sans TC",
-        "Microsoft JhengHei",
-        sans-serif;
-
-    background: #f7f7f5;
-
-    color: #202020;
-
-    min-height: 100vh;
-
-}
-
-
-button,
-input,
-select,
-textarea {
-
-    font: inherit;
-
-}
-
-
-button {
-
-    cursor: pointer;
-
-}
-
-
-img {
-
-    max-width: 100%;
-
-}
-
-
-/* ==================================================
-   Header
-================================================== */
-
-.app-header {
-
-    position: sticky;
-
-    top: 0;
-
-    z-index: 100;
-
-    background:
-        rgba(247,247,245,0.92);
-
-    backdrop-filter:
-        blur(14px);
-
-    border-bottom:
-        1px solid #e9e9e5;
-
-}
-
-
-.header-inner {
-
-    max-width: 760px;
-
-    margin: 0 auto;
-
-    padding:
-        22px 20px 18px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-}
-
-.display-settings-button,
-.announcements-button {
-    width: 42px;
-    height: 42px;
-    border: 1px solid #e1e1dc;
-    border-radius: 50%;
-    background: white;
-    font-size: 19px;
+﻿   Auth Account Menu & Header Status UI
+.auth-account-wrapper {
+    position: relative;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    position: relative;
 }
 
-.display-settings-button:active,
-.announcements-button:active {
-    transform: scale(0.96);
+.auth-open-button {
+    max-width: 220px;
 }
 
-.header-actions {
+.auth-button-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.auth-account-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: min(220px, calc(100vw - 32px));
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--line, #e5e5e0);
+    border-radius: 14px;
+    box-shadow:
+        var(--shadow-soft, 0 8px 24px rgba(32, 32, 32, 0.06)),
+        0 1px 2px rgba(32, 32, 32, 0.04);
+    padding: 0;
+    z-index: 1000;
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    overflow: hidden;
 }
 
-.group-switch-button {
+.auth-account-menu[hidden] {
+    display: none !important;
+}
+
+.auth-account-info {
+    padding: 12px 14px 11px;
+}
+
+.auth-account-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #202020;
+    letter-spacing: 0;
+    word-break: break-all;
+}
+
+.auth-account-actions {
+    border-top: 1px solid var(--line, #e5e5e0);
+    padding: 4px;
     display: flex;
-    align-items: center;
-    gap: 5px;
-    height: 42px;
-    max-width: 148px;
-    padding: 0 13px;
-    border: 1px solid #e1e1dc;
-    border-radius: 21px;
-    background: white;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.auth-menu-item-button {
+    width: 100%;
+    min-height: 38px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
     color: #333;
     font-size: 13px;
     font-weight: 600;
-    transition: transform var(--motion-fast), background-color var(--motion-fast), color var(--motion-fast), box-shadow var(--motion-fast);
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    cursor: pointer;
+    transition: background-color var(--motion-fast);
 }
 
-.group-switch-button:active {
-    transform: scale(0.96);
+.auth-menu-item-button:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.auth-logout-button {
+    color: #d93838;
+}
+
+
+.auth-logout-button:hover {
+    background: #fff5f5;
+}
+
+.auth-logout-button:active {
+    background: #ffecec;
+}
+
+/* Dark Theme Support for Auth Account Menu */
+[data-theme="dark"] .auth-account-menu {
+    background: var(--dark-card, #292927);
+    border-color: var(--dark-border, #3d3d39);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+}
+
+[data-theme="dark"] .auth-account-title {
+    color: var(--dark-text, #f2f2ed);
+}
+
+[data-theme="dark"] .auth-account-email {
+    color: var(--dark-muted, #999990);
+}
+
+[data-theme="dark"] .auth-account-actions {
+    border-top-color: var(--dark-border, #3d3d39);
+}
+
+[data-theme="dark"] .auth-logout-button {
+    background: transparent;
+    color: #ff6b6b;
+}
+
+[data-theme="dark"] .auth-menu-item-button {
+    color: var(--dark-text, #f2f2ed);
+}
+
+[data-theme="dark"] .auth-menu-item-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .auth-logout-button:hover {
+    background: rgba(255, 107, 107, 0.12);
+}
+
+[data-theme="dark"] .auth-logout-button:active {
+    background: rgba(255, 107, 107, 0.18);
 }
 
 .group-switch-icon {
@@ -526,7 +508,7 @@ img {
 }
 
 
-/* Badge 出現 */
+/* Badge ?箇 */
 
 @keyframes randomPickerBadgeIn {
 
@@ -755,7 +737,7 @@ img {
 }
 
 
-/* + 號 */
+/* + ??*/
 
 .floating-add-button span {
 
@@ -3359,7 +3341,7 @@ body.font-extra-large .card-actions button {
 
 /* ==================================================
    Dark Mode - Complete UI Fix
-   請放在 CSS 最底部
+   隢??CSS ?摨
 ================================================== */
 
 [data-theme="dark"] {
@@ -3377,7 +3359,7 @@ body.font-extra-large .card-actions button {
 
 
 /* =========================
-   基本背景
+   ?箸?
 ========================= */
 
 [data-theme="dark"] body {
@@ -3411,7 +3393,7 @@ body.font-extra-large .card-actions button {
 
 
 /* =========================
-   搜尋
+   ??
 ========================= */
 
 [data-theme="dark"] .search-box {
@@ -3438,7 +3420,7 @@ body.font-extra-large .card-actions button {
 
 
 /* =========================
-   分類按鈕
+   ????
 ========================= */
 
 [data-theme="dark"] .category {
@@ -3455,7 +3437,7 @@ body.font-extra-large .card-actions button {
 
 
 /* =========================
-   餐廳卡片
+   擗輒?∠?
 ========================= */
 
 [data-theme="dark"] .restaurant-card {
@@ -3483,7 +3465,7 @@ body.font-extra-large .card-actions button {
 
 
 /* =========================
-   卡片按鈕
+   ?∠???
 ========================= */
 
 [data-theme="dark"] .card-actions button {
@@ -3503,7 +3485,7 @@ body.font-extra-large .card-actions button {
 
 
 /* =========================
-   收藏按鈕
+   ?嗉???
 ========================= */
 
 [data-theme="dark"] .favorite {
@@ -3527,7 +3509,7 @@ body.font-extra-large .card-actions button {
 
 
 /* ==================================================
-   編輯餐廳 Modal
+   蝺刻摩擗輒 Modal
 ================================================== */
 
 [data-theme="dark"] .restaurant-modal {
@@ -3551,7 +3533,7 @@ body.font-extra-large .card-actions button {
 
 
 /* =========================
-   表單
+   銵典
 ========================= */
 
 [data-theme="dark"] .form-section {
@@ -3599,7 +3581,7 @@ body.font-extra-large .card-actions button {
 
 
 /* =========================
-   菜單
+   ?
 ========================= */
 
 [data-theme="dark"] .menu-form-label > span {
@@ -3633,28 +3615,28 @@ body.font-extra-large .card-actions button {
 
 
 /* ==================================================
-   營業時間編輯器
+   ?平??蝺刻摩??
 ================================================== */
 
-/* 「營業時間」標題 */
+/* ??璆剜???憿?*/
 [data-theme="dark"] .hours-editor > span {
     color: var(--dark-secondary);
 }
 
 
-/* 每一個星期 */
+/* 瘥?????*/
 [data-theme="dark"] .hours-day-row {
     border-bottom-color: var(--dark-border);
 }
 
 
-/* 星期一、星期二文字 */
+/* ??銝?????? */
 [data-theme="dark"] .hours-day-name {
     color: var(--dark-text);
 }
 
 
-/* 開啟 / 未營業按鈕 */
+/* ?? / ?芰?璆剜???*/
 [data-theme="dark"] .hours-open-toggle {
     background: var(--dark-surface);
     border-color: var(--dark-border);
@@ -3668,7 +3650,7 @@ body.font-extra-large .card-actions button {
 }
 
 
-/* 時間輸入框 */
+/* ??頛詨獢?*/
 [data-theme="dark"] .hours-time-fields input,
 [data-theme="dark"] .hours-quick-times input {
     background: var(--dark-surface);
@@ -3677,27 +3659,27 @@ body.font-extra-large .card-actions button {
 }
 
 
-/* 時間輸入框 placeholder */
+/* ??頛詨獢?placeholder */
 [data-theme="dark"] .hours-time-fields input::placeholder,
 [data-theme="dark"] .hours-quick-times input::placeholder {
     color: var(--dark-muted);
 }
 
 
-/* 快速套用區塊 */
+/* 敹恍??典?憛?*/
 [data-theme="dark"] .hours-quick-apply {
     background: var(--dark-surface);
     border-color: var(--dark-border);
 }
 
 
-/* 「快速套用相同營業時間」 */
+/* ?翰???函??璆剜???*/
 [data-theme="dark"] .hours-quick-apply strong {
     color: var(--dark-secondary);
 }
 
 
-/* 星期一～星期日選擇按鈕 */
+/* ??銝嚚???豢??? */
 [data-theme="dark"] .hours-day-picker label {
     background: var(--dark-card);
     border-color: var(--dark-border);
@@ -3711,7 +3693,7 @@ body.font-extra-large .card-actions button {
 }
 
 
-/* 套用按鈕 */
+/* 憟?? */
 [data-theme="dark"] #applyQuickHours {
     background: #f2f2ed;
     color: #202020;
@@ -3719,13 +3701,202 @@ body.font-extra-large .card-actions button {
 
 
 /* ==================================================
-   設定面板
+   閮剖??Ｘ
 ================================================== */
 
 [data-theme="dark"] .display-settings-sheet {
     background: var(--dark-bg);
     color: var(--dark-text);
 }
+/* ==================================================
+   Auth Modal & Views
+================================================== */
+/* ==================================================
+   Auth Route Container & Sheet
+================================================== */
+
+.auth-route-container {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    overflow-y: auto;
+    z-index: 1000;
+    background: var(--bg-color, #f7f7f5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+}
+
+.auth-route-container[hidden] {
+    display: none !important;
+}
+
+.auth-route-sheet {
+    width: 100%;
+    max-width: 440px;
+    background: white;
+    border: 1px solid #e9e9e5;
+    border-radius: 24px;
+    padding: 28px 24px;
+    box-shadow: 0 12px 40px rgba(32, 32, 32, 0.08);
+    margin: auto 0;
+    position: relative;
+}
+
+[data-theme="dark"] .auth-route-container {
+    background: var(--dark-bg, #121212);
+}
+
+[data-theme="dark"] .auth-route-sheet {
+    background: var(--dark-card, #1e1e1e);
+    border-color: var(--dark-border, #2a2a2a);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+
+
+.auth-sheet {
+    max-width: 440px;
+}
+
+.auth-view {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.auth-view[hidden] {
+    display: none !important;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 0;
+}
+
+.auth-description {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 4px;
+}
+
+
+.auth-route-body {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.auth-helper-links {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -4px;
+}
+
+.auth-text-button {
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 13px;
+    padding: 0;
+    cursor: pointer;
+}
+
+.auth-text-button:hover {
+    text-decoration: underline;
+    color: #000;
+}
+
+.auth-submit-button {
+    margin-top: 8px;
+}
+
+.auth-switch-prompt {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 16px;
+    font-size: 14px;
+    color: #666;
+    border-top: 1px solid #eee;
+    padding-top: 16px;
+}
+
+.auth-text-link {
+    background: none;
+    border: none;
+    color: #202020;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.auth-text-link:hover {
+    text-decoration: underline;
+}
+
+
+/* Dark Theme Support for Auth */
+[data-theme="dark"] .auth-open-button {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .auth-open-button:hover {
+    background: var(--dark-elevated);
+}
+
+[data-theme="dark"] .auth-description {
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .auth-text-button {
+    color: var(--dark-secondary);
+}
+
+[data-theme="dark"] .auth-text-button:hover {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .auth-switch-prompt {
+    color: var(--dark-secondary);
+    border-top-color: var(--dark-border);
+}
+
+[data-theme="dark"] .auth-text-link {
+    color: var(--dark-text);
+}
+
+.auth-close-button {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: #f2f2ed;
+    color: #202020;
+    font-size: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background var(--motion-fast);
+}
+
+.auth-close-button:hover {
+    background: #e1e1dc;
+}
+
 
 [data-theme="dark"] .display-setting-section h3 {
     color: var(--dark-secondary);
@@ -3751,13 +3922,13 @@ body.font-extra-large .card-actions button {
 }
 
 
-/* 設定面板拖曳提示 */
+/* 閮剖??Ｘ??內 */
 [data-theme="dark"] .display-settings-sheet::before {
     background: #555550;
 }
 
 /* ==================================================
-   公告面板
+   ?砍??Ｘ
 ================================================== */
 
 .announcements-sheet {
@@ -3886,7 +4057,7 @@ body.font-extra-large .card-actions button {
 
 
 /* ==================================================
-   公告面板
+   ?砍??Ｘ
 ================================================== */
 
 .announcements-sheet {
@@ -4016,7 +4187,7 @@ body.font-extra-large .card-actions button {
 
 
 /* ==================================================
-   排序列表
+   ???”
 ================================================== */
 
 [data-theme="dark"] .order-item {
@@ -4040,7 +4211,7 @@ body.font-extra-large .card-actions button {
 
 
 /* ==================================================
-   詳細資料
+   閰喟敦鞈?
 ================================================== */
 
 [data-theme="dark"] .detail-sheet {
@@ -4077,7 +4248,7 @@ body.font-extra-large .card-actions button {
 
 
 /* =========================
-   詳細資料中的地址、電話等
+   閰喟敦鞈?銝剔??啣??閰梁?
 ========================= */
 
 [data-theme="dark"] .info-item > span {
@@ -4094,7 +4265,7 @@ body.font-extra-large .card-actions button {
 
 
 /* =========================
-   描述
+   ?膩
 ========================= */
 
 [data-theme="dark"] .description {
@@ -4111,7 +4282,7 @@ body.font-extra-large .card-actions button {
 
 
 /* =========================
-   詳細頁按鈕
+   閰喟敦????
 ========================= */
 
 [data-theme="dark"] .detail-map-button {
@@ -4133,7 +4304,7 @@ body.font-extra-large .card-actions button {
 
 
 /* ==================================================
-   空白狀態
+   蝛箇???
 ================================================== */
 
 [data-theme="dark"] .empty-state {
@@ -4157,7 +4328,7 @@ body.font-extra-large .card-actions button {
 
 
 /* ==================================================
-   圖片 Placeholder
+   ?? Placeholder
 ================================================== */
 
 [data-theme="dark"] .restaurant-image {
@@ -4182,8 +4353,8 @@ body.font-extra-large .card-actions button {
 
 
 /* ==================================================
-   字體大小設定
-   確保 dark mode 不會把文字顏色蓋回去
+   摮?憭批?閮剖?
+   蝣箔? dark mode 銝???摮??脰??
 ================================================== */
 
 [data-theme="dark"] .restaurant-title h2 {
@@ -4204,7 +4375,7 @@ body.font-extra-large .card-actions button {
 }
 
 /* ==================================================
-   Dark Mode - 首頁菜單按鈕文字
+   Dark Mode - 擐??????
 ================================================== */
 
 [data-theme="dark"] .card-actions .menu-button,
@@ -4215,7 +4386,7 @@ body.font-extra-large .card-actions button {
 }
 
 /* ==================================================
-   修正首頁卡片模式餐廳圖片
+   靽格迤擐??∠?璅∪?擗輒??
 ================================================== */
 
 .restaurant-list:not(.list-view) .restaurant-card {
@@ -4240,7 +4411,7 @@ body.font-extra-large .card-actions button {
     object-position: center;
 }
 
-/* 手機 */
+/* ?? */
 @media (max-width: 600px) {
     .restaurant-list:not(.list-view) .restaurant-image {
         height: 210px;
@@ -4347,7 +4518,7 @@ body.font-extra-large .card-actions button {
 }
 
 
-/* 可愛的小餐盤 */
+/* ?舀???擗 */
 
 .app-loading-icon {
     width: 52px;
@@ -4369,7 +4540,7 @@ body.font-extra-large .card-actions button {
 }
 
 
-/* 標題 */
+/* 璅? */
 
 .app-loading-title {
     margin-bottom: 5px;
@@ -4381,7 +4552,7 @@ body.font-extra-large .card-actions button {
 }
 
 
-/* 說明 */
+/* 隤芣? */
 
 .app-loading-text {
     font-size: 13px;
@@ -4391,7 +4562,7 @@ body.font-extra-large .card-actions button {
 }
 
 
-/* 三個小圓點 */
+/* 銝??? */
 
 .app-loading-dots {
     display: flex;
@@ -4783,7 +4954,7 @@ body.font-extra-large .card-actions button {
 }
 
 /* ==================================================
-   群組刪除按鈕
+   蝢斤??芷??
    ================================================== */
 
 .group-delete-button {
@@ -4880,7 +5051,7 @@ html[data-theme="dark"] .group-delete-button:hover {
 
 }
 /* ==================================================
-   修正公告按鈕深色模式外觀
+   靽格迤?砍???瘛梯璅∪?憭?
 ================================================== */
 [data-theme="dark"] .announcements-button {
     background: var(--dark-card);

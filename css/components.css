@@ -1,0 +1,104 @@
+﻿/* Components */
+
+/* ==================================================
+   Toast Message System
+   ================================================== */
+
+.toast-container {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.toast {
+    background: rgba(32, 32, 32, 0.9);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(8px);
+    pointer-events: auto;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ==================================================
+   Random Picker Overlay (方案三 - 餐具動畫)
+   ================================================== */
+
+.random-picker-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    background: rgba(247, 247, 245, 0.95);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+}
+
+.random-picker-overlay.show {
+    display: flex;
+}
+
+.picker-loading-text {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 25px;
+    color: #333;
+}
+
+.picker-utensils {
+    display: flex;
+    gap: 15px;
+    font-size: 48px;
+}
+
+.picker-utensils span:first-child { 
+    transform-origin: bottom center; 
+    animation: fork-sway 1s ease-in-out infinite; 
+}
+.picker-utensils span:last-child { 
+    transform-origin: bottom center; 
+    animation: spoon-sway 1s ease-in-out infinite; 
+}
+
+@keyframes fork-sway {
+    0%, 100% { transform: rotate(-20deg); }
+    50% { transform: rotate(20deg); }
+}
+@keyframes spoon-sway {
+    0%, 100% { transform: rotate(20deg); }
+    50% { transform: rotate(-20deg); }
+}
+
+[data-theme="dark"] .random-picker-overlay {
+    background: rgba(20, 20, 20, 0.95);
+}
+
+[data-theme="dark"] .picker-loading-text {
+    color: #f2f2ed;
+}
+
+
+[data-theme="dark"] .toast {
+    background: rgba(240, 240, 240, 0.95);
+    color: #202020;
+}
+

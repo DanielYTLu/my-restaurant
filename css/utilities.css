@@ -1,0 +1,17 @@
+:root {
+    /* 圓角系統 */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --radius-full: 999px;
+
+    /* 間距系統 */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+
+    /* 動畫過場 */
+    --motion-base: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
