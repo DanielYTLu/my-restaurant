@@ -869,6 +869,9 @@ export function setupAuthStateListener() {
         }
 
         if (event === "INITIAL_SESSION") {
+            if (user) {
+                void handleAuthUserChanged(user);
+            }
             return;
         }
 
