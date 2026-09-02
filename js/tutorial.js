@@ -1,6 +1,8 @@
 
 
+import { getCurrentUser } from './storage.js';
 import { closeAuthAccountMenu } from './auth.js';
+import { showToast } from './utils.js';
 
 const tutorialSteps = [
     {
@@ -55,10 +57,29 @@ let cardEl = null;
 let isTourActive = false;
 
 export function initTutorial() {
+    // 等待 Auth 狀態初始化完成，延遲判斷
+    setTimeout(() => {
+        checkAndStartTutorial();
+    }, 2000);
+}
+
+function checkAndStartTutorial() {
+    const user = getCurrentUser();
+    
+    if (!user) {
+        // 未登入：不顯示教學，但在適當操作時可提示
+        console.log("未登入狀態，跳過自動教學");
+        return;
+    }
+
     if (!localStorage.getItem('hasSeenTutorial')) {
-        setTimeout(startTutorial, 1500);
+        startTutorial();
         localStorage.setItem('hasSeenTutorial', 'true');
     }
+}
+
+export function showLoginPrompt() {
+    showToast('請先登入或註冊，即可解鎖更多完整功能！', 4000);
 }
 
 export function startTutorial() {

@@ -13,7 +13,8 @@ import { getCurrentGroupId, canEditCurrentGroup } from './group.js';
 import { getCurrentUser, loadDisplaySettings, saveDisplaySettings } from './storage.js';
 import { ALL_CATEGORIES } from './config.js';
 
-import { startTutorial, initTutorial } from './tutorial.js';
+import { startTutorial, initTutorial, showLoginPrompt } from './tutorial.js';
+
 
 // Global Toast Handler
 const toastContainer = document.getElementById("toastContainer");
@@ -487,6 +488,24 @@ export function initializeDisplaySettings() {
         
         renderCategoryVisibilityManager();
         if (categoryVisibilityModal) {
+
+    // 新增：未登入時的提示功能
+    const addRestaurantButton = document.getElementById("addRestaurantButton");
+    addRestaurantButton?.addEventListener("click", () => {
+        if (!getCurrentUser()) {
+            showLoginPrompt();
+            return;
+        }
+    });
+
+    const randomPickerButton = document.getElementById("randomPickerButton");
+    randomPickerButton?.addEventListener("click", () => {
+        if (!getCurrentUser()) {
+            showLoginPrompt();
+            return;
+        }
+    });
+
             categoryVisibilityModal.classList.add("show");
             console.log("✅ 分類管理模組已開啟");
         }
