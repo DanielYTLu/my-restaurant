@@ -239,7 +239,7 @@
 
 <section class="category-section">
 
-    <div class="category-scroll">
+    <div class="category-scroll" id="categoryScroll">
 
         <!-- 全部 -->
         <button
@@ -259,76 +259,6 @@
         >
             <span class="category-icon">❤️</span>
             <span>收藏</span>
-        </button>
-
-        <!-- 早餐 -->
-        <button
-            class="category"
-            data-category="早餐"
-            type="button"
-        >
-            <span class="category-icon">🍳</span>
-            <span>早餐</span>
-        </button>
-
-        <!-- 午餐 -->
-        <button
-            class="category"
-            data-category="午餐"
-            type="button"
-        >
-            <span class="category-icon">🍱</span>
-            <span>午餐</span>
-        </button>
-
-        <!-- 晚餐 -->
-        <button
-            class="category"
-            data-category="晚餐"
-            type="button"
-        >
-            <span class="category-icon">🍽️</span>
-            <span>晚餐</span>
-        </button>
-
-        <!-- 飲料 -->
-        <button
-            class="category"
-            data-category="飲料"
-            type="button"
-        >
-            <span class="category-icon">🧋</span>
-            <span>飲料</span>
-        </button>
-
-        <!-- 點心 -->
-        <button
-            class="category"
-            data-category="點心"
-            type="button"
-        >
-            <span class="category-icon">🍰</span>
-            <span>點心</span>
-        </button>
-
-        <!-- 速食 -->
-        <button
-            class="category"
-            data-category="速食"
-            type="button"
-        >
-            <span class="category-icon">🍔</span>
-            <span>速食</span>
-        </button>
-
-        <!-- 其他 -->
-        <button
-            class="category"
-            data-category="其他"
-            type="button"
-        >
-            <span class="category-icon">✨</span>
-            <span>其他</span>
         </button>
 
     </div>
@@ -460,6 +390,13 @@
                     </div>
                 </section>
 
+                                <section class="display-setting-section">
+                    <h3>分類管理</h3>
+                    <button id="editCategoryVisibilityButton" class="settings-row-button" type="button">
+                        <span>👁️ 顯示分類管理</span>
+                        <span>›</span>
+                    </button>
+                </section>
                 <button id="editOrderButton" class="settings-row-button" type="button">
                     <span>🔁 編輯卡片順序</span>
                     <span>›</span>
@@ -557,6 +494,29 @@
             </div>
 
             <div id="orderList" class="order-list"></div>
+
+        </div>
+
+    </div>
+
+
+    <div id="categoryVisibilityModal" class="modal-overlay">
+
+        <div class="display-settings-sheet">
+
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">SETTINGS</p>
+                    <h2>顯示分類管理</h2>
+                </div>
+                <button id="finishCategoryVisibilityButton" class="modal-close" type="button">×</button>
+            </div>
+
+            <div class="display-settings-content">
+                <div id="categoryVisibilityManager" class="category-visibility-grid">
+                    <!-- JavaScript 動態渲染勾選項目 -->
+                </div>
+            </div>
 
         </div>
 
@@ -695,33 +655,31 @@
                                 請選擇分類
                             </option>
 
-                            <option value="早餐">
-                                早餐
-                            </option>
-
-                            <option value="午餐">
-                                午餐
-                            </option>
-
-                            <option value="晚餐">
-                                晚餐
-                            </option>
-
-                            <option value="飲料">
-                                飲料
-                            </option>
-
-                            <option value="點心">
-                                點心
-                            </option>
-
-                            <option value="速食">
-                                速食
-                            </option>
-
-                            <option value="其他">
-                                其他
-                            </option>
+                            <option value="早餐">🍳 早餐</option>
+                            <option value="午餐">🍱 午餐</option>
+                            <option value="晚餐">🍽️ 晚餐</option>
+                            <option value="飲料">🧋 飲料</option>
+                            <option value="點心">🍰 點心</option>
+                            <option value="速食">🍔 速食</option>
+                            <option value="日式料理">🍣 日式料理</option>
+                            <option value="美式/西式">🥩 美式/西式</option>
+                            <option value="中式/台菜">🥟 中式/台菜</option>
+                            <option value="韓式料理">🥘 韓式料理</option>
+                            <option value="義式/披薩">🍕 義式/披薩</option>
+                            <option value="泰式/南洋">🍜 泰式/南洋</option>
+                            <option value="港式/茶餐廳">🇭🇰 港式/茶餐廳</option>
+                            <option value="火鍋/燒烤">🍲 火鍋/燒烤</option>
+                            <option value="咖啡廳/下午茶">☕ 咖啡廳/下午茶</option>
+                            <option value="居酒屋/餐酒館">🍻 居酒屋/餐酒館</option>
+                            <option value="吃到飽/自助餐">🦀 吃到飽/自助餐</option>
+                            <option value="宵夜場">🌙 宵夜場</option>
+                            <option value="素食/蔬食">🥗 素食/蔬食</option>
+                            <option value="親子餐廳">🧸 親子餐廳</option>
+                            <option value="烘焙/麵包">🍞 烘焙/麵包</option>
+                            <option value="冰品/甜湯">🍧 冰品/甜湯</option>
+                            <option value="小吃/夜市">🍢 小吃/夜市</option>
+                            <option value="健康餐盒/沙拉">🥗 健康餐盒/沙拉</option>
+                            <option value="其他">🏷️ 其他</option>
                         </select>
 
                     </label>
@@ -1316,7 +1274,10 @@
     <div class="app-loading-card">
 
         <div class="app-loading-icon">
-            🍽️
+            <div class="picker-utensils">
+                <span>🍴</span>
+                <span>🥄</span>
+            </div>
         </div>
 
         <div class="app-loading-title">
@@ -1341,9 +1302,39 @@
 </div>
 
 
-<script src="script.js"></script>
+<!-- Modular JavaScript Application -->
+<script type="module" src="js/config.js"></script>
+<script type="module" src="js/utils.js"></script>
+<script type="module" src="js/loading.js"></script>
+<script type="module" src="js/storage.js"></script>
+<script type="module" src="js/supabase.js"></script>
+<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/restaurant.js"></script>
+<script type="module" src="js/group.js"></script>
+<script type="module" src="js/ui.js"></script>
+<script type="module" src="js/search.js"></script>
+<script type="module" src="js/theme.js"></script>
+<script type="module" src="js/announcements.js"></script>
+<script type="module" src="js/menu.js"></script>
+<script type="module" src="js/image.js"></script>
+<script type="module" src="js/randomPicker.js"></script>
+<script type="module" src="js/app.js"></script>
 
 
+
+
+
+<!-- Random Picker Overlay -->
+<div id="randomPickerOverlay" class="random-picker-overlay">
+    <div class="picker-loading-text">正在幫你選一家餐廳...</div>
+    <div class="picker-utensils">
+        <span>🍴</span>
+        <span>🥄</span>
+    </div>
+</div>
+
+<!-- Toast 容器 -->
+<div id="toastContainer" class="toast-container"></div>
 
 </body>
 
