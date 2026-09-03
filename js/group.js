@@ -97,6 +97,7 @@ export async function createGroupInSupabase(group) {
         id: group.id,
         name: group.name,
         visibility: group.visibility || "private",
+        invite_code: group.invite_code || null,
         user_id: getCurrentUser()?.id || null,
         created_at: group.created_at || new Date().toISOString()
     };
@@ -137,7 +138,7 @@ export async function createGroupInSupabase(group) {
 }
 
 // Update group in Supabase
-export async function updateGroupInSupabase(id, name, visibility) {
+export async function updateGroupInSupabase(id, name, visibility, inviteCode) {
     const group = restaurantGroups.find(candidate => String(candidate.id) === String(id));
     if (group && group.name === UNCATEGORIZED_GROUP_NAME) {
         console.warn("⚠️ 系統保留群組「未分類」不可修改。");
@@ -148,6 +149,7 @@ export async function updateGroupInSupabase(id, name, visibility) {
         const updateData = {};
         if (name !== undefined) updateData.name = name;
         if (visibility !== undefined) updateData.visibility = visibility;
+        if (inviteCode !== undefined) updateData.invite_code = inviteCode;
 
         const { error } = await supabaseClient
             .from("restaurant_groups")
@@ -172,6 +174,49 @@ export async function updateGroupInSupabase(id, name, visibility) {
 export async function renameGroupInSupabase(id, name) {
     return await updateGroupInSupabase(id, name, undefined);
 }
+
+// Join group by invite code
+export async function joinGroupByInviteCode(inviteCode) {
+    if (!inviteCode || inviteCode.length !== 6) {
+        showToast("❌ 請輸入有效的 6 位數邀請碼", "error");
+        return { success: false };
+    }
+
+    try {
+        const { data, error } = await supabaseClient
+            .from("restaurant_groups")
+            .select("*")
+            .eq("invite_code", inviteCode)
+            .single();
+
+        if (error || !data) {
+            showToast("❌ 找不到此邀請碼對應的群組，請確認後重試", "error");
+            return { success: false };
+        }
+
+        const newGroup = {
+            id: String(data.id),
+            name: data.name,
+            visibility: data.visibility,
+            invite_code: data.invite_code,
+            user_id: data.user_id,
+            created_at: data.created_at
+        };
+
+        if (!restaurantGroups.some(g => String(g.id) === newGroup.id)) {
+            restaurantGroups.push(newGroup);
+        }
+
+        localStorage.setItem(`joined_shared_${newGroup.id}`, 'true');
+        showToast(`✅ 已成功加入群組：${data.name}`, "success");
+        return { success: true, group: newGroup };
+    } catch (err) {
+        console.error("Join group error:", err);
+        showToast("❌ 加入群組時發生錯誤", "error");
+        return { success: false };
+    }
+}
+
 
 // Ensure groups are initialized with uncategorized group
 export function ensureGroupsInitialized() {
@@ -263,7 +308,13 @@ export function canEditCurrentGroup() {
         return true;
     }
     
-    return group.user_id === currentUser.id;
+    if (group.user_id === currentUser.id) {
+        return true;
+    }
+    if (group.visibility === 'shared' && localStorage.getItem('joined_shared_' + group.id) === 'true') {
+        return true;
+    }
+    return false;
 }
 
 // Delete group

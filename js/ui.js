@@ -547,6 +547,48 @@ export function initializeDisplaySettings() {
     authTutorialButton?.addEventListener("click", startTutorial);
 }
 
+
+    // Join group logic
+    const openJoinGroupButton = document.getElementById("openJoinGroupButton");
+    const joinGroupContainer = document.getElementById("joinGroupContainer");
+    const joinGroupButton = document.getElementById("joinGroupButton");
+    const cancelJoinGroupButton = document.getElementById("cancelJoinGroupButton");
+    const joinInviteCodeInput = document.getElementById("joinInviteCodeInput");
+
+    openJoinGroupButton?.addEventListener("click", () => {
+        joinGroupContainer.style.display = "block";
+        openJoinGroupButton.style.display = "none";
+    });
+
+    cancelJoinGroupButton?.addEventListener("click", () => {
+        joinGroupContainer.style.display = "none";
+        openJoinGroupButton.style.display = "flex";
+
+    // 自動將輸入轉為大寫
+    joinInviteCodeInput.addEventListener("input", (e) => {
+        e.target.value = e.target.value.toUpperCase();
+    });
+
+        joinInviteCodeInput.value = "";
+    });
+
+    joinGroupButton?.addEventListener("click", async () => {
+        const code = joinInviteCodeInput.value.trim().toUpperCase();
+        if (!code) {
+            showToast("請輸入邀請碼");
+            return;
+        }
+        
+        const { joinGroupByInviteCode } = await import('./group.js');
+        const result = await joinGroupByInviteCode(code);
+        
+        if (result.success) {
+            joinGroupContainer.style.display = "none";
+            openJoinGroupButton.style.display = "flex";
+            joinInviteCodeInput.value = "";
+        }
+    });
+
 function updateDisplaySettingsControls() {
     const settings = getDisplaySettings();
     document.querySelectorAll("#fontSizeOptions button").forEach(button => {

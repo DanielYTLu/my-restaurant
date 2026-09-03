@@ -72,7 +72,7 @@ import {
 } from './image.js';
 import { initializeRandomPicker } from './randomPicker.js';
 import { WEEK_DAYS, UNCATEGORIZED_GROUP_NAME, ALL_CATEGORIES } from './config.js';
-import { showToast, escapeHtml, generateUuid } from './utils.js';
+import { showToast, escapeHtml, generateUuid, generateInviteCode } from './utils.js';
 
 // Weekly hours editor functions
 function renderWeeklyHoursEditor(value = null) {
@@ -389,16 +389,34 @@ function initializeGroupManagement() {
     const groupVisibilitySelect = document.getElementById("groupVisibilitySelect");
     const groupFormTitle = document.getElementById("groupFormTitle");
     const submitGroupFormButton = document.getElementById("submitGroupFormButton");
+    const groupInviteCodeField = document.getElementById("groupInviteCodeField");
+    const groupInviteCodeDisplay = document.getElementById("groupInviteCodeDisplay");
+    const copyGroupInviteCodeButton = document.getElementById("copyGroupInviteCodeButton");
 
     if (!groupSwitchButton || !groupSheetModal || !groupFormModal || !groupForm) {
         return;
     }
+
+    // Toggle invite code field visibility based on selected visibility
+    function updateInviteCodeVisibility() {
+        if (!groupVisibilitySelect || !groupInviteCodeField) return;
+        const val = groupVisibilitySelect.value;
+        if (val === "shared") {
+            groupInviteCodeField.hidden = false;
+        } else {
+            groupInviteCodeField.hidden = true;
+            if (groupInviteCodeDisplay) groupInviteCodeDisplay.value = "";
+        }
+    }
+
+    groupVisibilitySelect?.addEventListener("change", updateInviteCodeVisibility);
 
     function closeGroupFormModalHandler() {
         groupFormModal.classList.remove("show");
         groupForm.reset();
         delete groupForm.dataset.editingGroupId;
         if (groupVisibilitySelect) groupVisibilitySelect.value = "private";
+        updateInviteCodeVisibility();
     }
 
     groupSwitchButton.addEventListener("click", () => {
@@ -408,6 +426,20 @@ function initializeGroupManagement() {
 
     closeGroupSheet?.addEventListener("click", () => {
         groupSheetModal.classList.remove("show");
+    });
+
+    const joinInviteCodeInput = document.getElementById("joinInviteCodeInput");
+    const joinGroupButton = document.getElementById("joinGroupButton");
+
+    copyGroupInviteCodeButton?.addEventListener("click", () => {
+        const code = groupInviteCodeDisplay?.value;
+        if (!code) return;
+        
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).then(() => {
+                showToast(`✅ 已複製邀請碼：${code}`, "success");
+            });
+        }
     });
 
     groupSheetModal.addEventListener("click", event => {
@@ -426,6 +458,63 @@ function initializeGroupManagement() {
         submitGroupFormButton.textContent = "建立";
         groupNameInput.value = "";
         if (groupVisibilitySelect) groupVisibilitySelect.value = "private";
+    // Join shared group
+    joinGroupButton?.addEventListener("click", async () => {
+        const inviteCode = joinInviteCodeInput?.value.trim().toUpperCase();
+        if (!inviteCode || inviteCode.length !== 6) {
+            showToast("❌ 請輸入有效的 6 位數邀請碼", "error");
+            return;
+        }
+
+        try {
+            const { data, error } = await supabaseClient
+                .from("restaurant_groups")
+                .select("*")
+                .eq("invite_code", inviteCode)
+                .single();
+
+            if (error || !data) {
+                showToast("❌ 找不到此邀請碼對應的群組，請確認後重試", "error");
+                return;
+            }
+
+            // 成功找到群組，將其加入本地狀態
+            const newGroup = {
+                id: String(data.id),
+                name: data.name,
+                visibility: data.visibility,
+                invite_code: data.invite_code,
+                user_id: data.user_id,
+                created_at: data.created_at
+            };
+
+            const currentGroups = getGroups();
+            if (!currentGroups.some(g => g.id === newGroup.id)) {
+                currentGroups.push(newGroup);
+                setGroups(currentGroups);
+                // 儲存至 local storage
+                saveGroupsLocal(currentGroups, getCurrentGroupId());
+            }
+
+            // 標記為已加入共享群組 (開放編輯權)
+            localStorage.setItem(`joined_shared_${newGroup.id}`, 'true');
+
+            showToast(`✅ 已成功加入群組：${data.name}`, "success");
+            joinInviteCodeInput.value = "";
+            renderGroupList();
+            
+            // 可選：自動切換至該群組
+            switchGroup(newGroup.id);
+            groupSheetModal.classList.remove("show");
+            renderRestaurants(getGroupFilteredRestaurants(getRestaurants()));
+
+        } catch (err) {
+            console.error("Join group error:", err);
+            showToast("❌ 加入群組時發生錯誤", "error");
+        }
+    });
+
+        updateInviteCodeVisibility();
         groupSheetModal.classList.remove("show");
         groupFormModal.classList.add("show");
         groupNameInput.focus();
@@ -460,16 +549,23 @@ function initializeGroupManagement() {
                 }
                 group.name = name;
                 group.visibility = visibility;
+                if (visibility === "shared" && !group.invite_code) {
+                    group.invite_code = generateInviteCode();
+                } else if (visibility !== "shared") {
+                    group.invite_code = null;
+                }
                 saveGroupsLocal(getGroups(), getCurrentGroupId());
-                updateGroupInSupabase(editingGroupId, name, visibility);
+                updateGroupInSupabase(editingGroupId, name, visibility, group.invite_code);
             }
             showToast("✅ 群組設定已更新", "success");
         } else {
             const groupUuid = generateUuid();
+            const inviteCode = visibility === "shared" ? generateInviteCode() : null;
             const newGroup = {
                 id: groupUuid,
                 name,
                 visibility,
+                invite_code: inviteCode,
                 user_id: getCurrentUser()?.id || null,
                 created_at: new Date().toISOString()
             };
@@ -523,14 +619,17 @@ function renderGroupList() {
     const myGroups = groups.filter(group => {
         if (group.name === UNCATEGORIZED_GROUP_NAME) return true;
         if (!currentUser) return !group.user_id || group.user_id === "local";
-        return group.user_id === currentUser.id;
+        if (group.user_id === currentUser.id) return true;
+        if (group.visibility === 'shared' && localStorage.getItem('joined_shared_' + group.id) === 'true') return true;
+        return false;
     });
 
     const publicGroups = groups.filter(group => {
         if (group.name === UNCATEGORIZED_GROUP_NAME) return false;
-        const isPublic = group.visibility === "public";
+        const isPublicOrShared = group.visibility === "public" || group.visibility === "shared";
         const isMine = currentUser ? (group.user_id === currentUser.id) : (!group.user_id || group.user_id === "local");
-        return isPublic && !isMine;
+        const isJoinedShared = currentUser && group.visibility === 'shared' && localStorage.getItem('joined_shared_' + group.id) === 'true';
+        return isPublicOrShared && !isMine && !isJoinedShared;
     });
 
     let htmlOutput = "";
@@ -579,6 +678,8 @@ function renderSingleGroupItem(group, isOthersPublic = false) {
     const badges = [];
     if (group.visibility === "public") {
         badges.push(`<span style="font-size: 10px; background: rgba(0,128,0,0.1); color: green; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">🌐 公開</span>`);
+    } else if (group.visibility === "shared") {
+        badges.push(`<span style="font-size: 10px; background: rgba(255,165,0,0.15); color: #d97706; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">🔗 共享</span>`);
     } else {
         badges.push(`<span style="font-size: 10px; background: rgba(128,128,128,0.1); color: gray; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">🔒 私人</span>`);
     }
@@ -607,15 +708,30 @@ function openRenameGroupModal(groupId) {
 
     const groupForm = document.getElementById("groupForm");
     const groupNameInput = document.getElementById("groupNameInput");
+    const groupVisibilitySelect = document.getElementById("groupVisibilitySelect");
     const groupFormTitle = document.getElementById("groupFormTitle");
     const submitGroupFormButton = document.getElementById("submitGroupFormButton");
     const groupSheetModal = document.getElementById("groupSheetModal");
     const groupFormModal = document.getElementById("groupFormModal");
 
     groupForm.dataset.editingGroupId = groupId;
-    groupFormTitle.textContent = "修改群組名稱";
+    groupFormTitle.textContent = "修改群組名稱與設定";
     submitGroupFormButton.textContent = "儲存";
     groupNameInput.value = group.name;
+    if (groupVisibilitySelect) {
+        groupVisibilitySelect.value = group.visibility || "private";
+    }
+    
+    // Call invite code visibility check
+    const groupInviteCodeField = document.getElementById("groupInviteCodeField");
+    const groupInviteCodeDisplay = document.getElementById("groupInviteCodeDisplay");
+    if (group.visibility === "shared" && group.invite_code) {
+        if (groupInviteCodeField) groupInviteCodeField.hidden = false;
+        if (groupInviteCodeDisplay) groupInviteCodeDisplay.value = group.invite_code;
+    } else {
+        if (groupInviteCodeField) groupInviteCodeField.hidden = true;
+        if (groupInviteCodeDisplay) groupInviteCodeDisplay.value = "";
+    }
 
     groupSheetModal?.classList.remove("show");
     groupFormModal?.classList.add("show");

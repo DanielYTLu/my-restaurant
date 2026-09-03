@@ -429,6 +429,25 @@
 
                 <div id="groupList" class="group-list"></div>
 
+                <!-- 新增：加入共享群組功能 -->
+                <div class="group-join-section" style="padding: 12px 0; border-top: 1px solid #eee; margin-top: 12px;">
+                    <button type="button" id="openJoinGroupButton" class="settings-row-button" style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; color: #333; font-weight: 500; cursor: pointer;">
+                        <span>🤝 加入共享群組</span>
+                        <span>›</span>
+                    </button>
+                </div>
+
+                <!-- 隱藏的輸入框與確認按鈕 (透過 modal 控制) -->
+                <div id="joinGroupContainer" style="display: none; padding: 16px 0; border-top: 1px solid #eee; margin-top: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <input type="text" id="joinInviteCodeInput" placeholder="請輸入邀請碼" class="form-input" style="width: 100%; padding: 14px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; transition: border-color 0.2s; box-sizing: border-box;" autocomplete="off">
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" id="joinGroupButton" style="flex: 2; padding: 14px 0; background: #333; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;">加入</button>
+                            <button type="button" id="cancelJoinGroupButton" style="flex: 1; padding: 14px 0; background: #eee; color: #666; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;">取消</button>
+                        </div>
+                    </div>
+                </div>
+
                 <button id="addGroupButton" class="settings-row-button group-add-button" type="button">
                     <span>＋ 新增群組</span>
                     <span>›</span>
@@ -469,9 +488,18 @@
                     <span>公開設定</span>
                     <select id="groupVisibilitySelect" class="form-input">
                         <option value="private">私人 (僅自己可見)</option>
+                        <option value="shared">共享 (透過邀請碼共用)</option>
                         <option value="public">公開 (所有人可見)</option>
                     </select>
                 </label>
+
+                <div id="groupInviteCodeField" class="form-field" hidden>
+                    <span>邀請碼</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="text" id="groupInviteCodeDisplay" readonly style="flex: 1; background: #f0f0f0; cursor: not-allowed;">
+                        <button type="button" id="copyGroupInviteCodeButton" class="group-copy-btn" style="background: rgba(255,165,0,0.15); border: 1px solid #d97706; color: #d97706; padding: 6px 12px; border-radius: 6px; cursor: pointer;">複製</button>
+                    </div>
+                </div>
 
                 <div class="group-form-actions">
                     <button type="button" id="cancelGroupFormButton" class="group-form-cancel-button">取消</button>

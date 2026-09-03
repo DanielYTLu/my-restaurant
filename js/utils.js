@@ -14,6 +14,16 @@ export function generateUuid() {
         return v.toString(16);
     });
 }
+// Invite Code Generator
+export function generateInviteCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 排除易混淆字元 (0, O, I, 1)
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+}
+
 
 // HTML Escape Function
 export function escapeHtml(value) {
