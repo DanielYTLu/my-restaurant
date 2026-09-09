@@ -4,7 +4,7 @@
 
 import AppLoading from './loading.js';
 import { setCurrentUser, getCurrentUser } from './storage.js';
-import { initializeAuthSession, setupAuthStateListener, initializeAuthSystem, reloadUserScopedLocalData } from './auth.js';
+import { initializeAuthSession, setupAuthStateListener, initializeAuthSystem, reloadUserScopedLocalData, handleRoute } from './auth.js';
 import { testSupabaseConnection, setSupabaseConnected, isSupabaseConnected } from './supabase.js';
 import { 
     getRestaurants, setRestaurants, 
@@ -32,7 +32,8 @@ import {
     deleteGroup,
     getGroupFilteredRestaurants,
     updateGroupInSupabase,
-    createGroupInSupabase
+    createGroupInSupabase,
+    joinGroupByInviteCode
 } from './group.js';
 import { 
     loadRestaurantsFromLocal, 
@@ -72,7 +73,7 @@ import {
 } from './image.js';
 import { initializeRandomPicker } from './randomPicker.js';
 import { WEEK_DAYS, UNCATEGORIZED_GROUP_NAME, ALL_CATEGORIES } from './config.js';
-import { showToast, escapeHtml, generateUuid, generateInviteCode } from './utils.js';
+import { showToast, escapeHtml, generateUuid, generateInviteCode, copyToClipboard } from './utils.js';
 
 // Weekly hours editor functions
 function renderWeeklyHoursEditor(value = null) {
@@ -182,10 +183,7 @@ function closeRestaurantModal() {
 
     delete restaurantForm.dataset.editingId;
 
-    const restaurantGroupFieldOnClose = document.getElementById("restaurantGroupField");
-    if (restaurantGroupFieldOnClose) {
-        restaurantGroupFieldOnClose.hidden = true;
-    }
+    // (已移除群組選單邏輯)
 
     updateMenuPreview(1, "");
     updateMenuPreview(2, "");
@@ -300,24 +298,7 @@ function openEditRestaurant(restaurant) {
     document.getElementById("restaurantName").value = restaurant.name || "";
     document.getElementById("restaurantCategory").value = restaurant.category || "";
 
-    const restaurantGroupField = document.getElementById("restaurantGroupField");
-    const restaurantGroupSelect = document.getElementById("restaurantGroup");
-
-    if (restaurantGroupField && restaurantGroupSelect) {
-        const allGroups = getGroups();
-        const currentUser = getCurrentUser();
-        // 篩選：只顯示該使用者有編輯權限的群組（使用者建立的，或是未分類）
-        const accessibleGroups = allGroups.filter(g => 
-            (currentUser && g.user_id === currentUser.id) || 
-            g.name === UNCATEGORIZED_GROUP_NAME
-        );
-
-        restaurantGroupSelect.innerHTML = accessibleGroups.map(group => 
-            `<option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}</option>`
-        ).join("");
-        restaurantGroupSelect.value = restaurant.groupId || getCurrentGroupId();
-        restaurantGroupField.hidden = false;
-    }
+    // (已移除群組選單邏輯)
 
     document.getElementById("restaurantRating").value = restaurant.rating ?? "";
     document.getElementById("restaurantPhone").value = restaurant.phone || "";
@@ -403,6 +384,11 @@ function initializeGroupManagement() {
         const val = groupVisibilitySelect.value;
         if (val === "shared") {
             groupInviteCodeField.hidden = false;
+            if (groupInviteCodeDisplay && !groupInviteCodeDisplay.value) {
+                const editingGroupId = groupForm.dataset.editingGroupId;
+                const editingGroup = editingGroupId ? getGroups().find(g => g.id === editingGroupId) : null;
+                groupInviteCodeDisplay.value = editingGroup?.invite_code || generateInviteCode();
+            }
         } else {
             groupInviteCodeField.hidden = true;
             if (groupInviteCodeDisplay) groupInviteCodeDisplay.value = "";
@@ -416,6 +402,7 @@ function initializeGroupManagement() {
         groupForm.reset();
         delete groupForm.dataset.editingGroupId;
         if (groupVisibilitySelect) groupVisibilitySelect.value = "private";
+        if (groupInviteCodeDisplay) groupInviteCodeDisplay.value = "";
         updateInviteCodeVisibility();
     }
 
@@ -431,14 +418,15 @@ function initializeGroupManagement() {
     const joinInviteCodeInput = document.getElementById("joinInviteCodeInput");
     const joinGroupButton = document.getElementById("joinGroupButton");
 
-    copyGroupInviteCodeButton?.addEventListener("click", () => {
-        const code = groupInviteCodeDisplay?.value;
+    copyGroupInviteCodeButton?.addEventListener("click", async () => {
+        const code = groupInviteCodeDisplay?.value?.trim();
         if (!code) return;
         
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(code).then(() => {
-                showToast(`✅ 已複製邀請碼：${code}`, "success");
-            });
+        const ok = await copyToClipboard(code);
+        if (ok) {
+            showToast(`✅ 已複製邀請碼：${code}`, "success");
+        } else {
+            showToast(`❌ 複製失敗，邀請碼為：${code}`, "error");
         }
     });
 
@@ -458,7 +446,41 @@ function initializeGroupManagement() {
         submitGroupFormButton.textContent = "建立";
         groupNameInput.value = "";
         if (groupVisibilitySelect) groupVisibilitySelect.value = "private";
-    // Join shared group
+        if (groupInviteCodeDisplay) groupInviteCodeDisplay.value = "";
+        updateInviteCodeVisibility();
+        groupSheetModal.classList.remove("show");
+        groupFormModal.classList.add("show");
+        groupNameInput.focus();
+    });
+
+    // Join shared group section
+    const openJoinGroupButton = document.getElementById("openJoinGroupButton");
+    const joinGroupContainer = document.getElementById("joinGroupContainer");
+    const cancelJoinGroupButton = document.getElementById("cancelJoinGroupButton");
+
+    openJoinGroupButton?.addEventListener("click", () => {
+        joinGroupContainer.style.display = "block";
+        openJoinGroupButton.style.display = "none";
+        joinInviteCodeInput?.focus();
+    });
+
+    cancelJoinGroupButton?.addEventListener("click", () => {
+        joinGroupContainer.style.display = "none";
+        openJoinGroupButton.style.display = "flex";
+        if (joinInviteCodeInput) joinInviteCodeInput.value = "";
+    });
+
+    joinInviteCodeInput?.addEventListener("input", (e) => {
+        e.target.value = e.target.value.toUpperCase();
+    });
+
+    joinInviteCodeInput?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            joinGroupButton?.click();
+        }
+    });
+
     joinGroupButton?.addEventListener("click", async () => {
         const inviteCode = joinInviteCodeInput?.value.trim().toUpperCase();
         if (!inviteCode || inviteCode.length !== 6) {
@@ -467,57 +489,22 @@ function initializeGroupManagement() {
         }
 
         try {
-            const { data, error } = await supabaseClient
-                .from("restaurant_groups")
-                .select("*")
-                .eq("invite_code", inviteCode)
-                .single();
-
-            if (error || !data) {
-                showToast("❌ 找不到此邀請碼對應的群組，請確認後重試", "error");
-                return;
+            const result = await joinGroupByInviteCode(inviteCode);
+            if (result.success && result.group) {
+                const currentGroups = getGroups();
+                saveGroupsLocal(currentGroups, result.group.id);
+                if (joinInviteCodeInput) joinInviteCodeInput.value = "";
+                joinGroupContainer.style.display = "none";
+                openJoinGroupButton.style.display = "flex";
+                renderGroupList();
+                switchGroup(result.group.id);
+                groupSheetModal.classList.remove("show");
+                renderRestaurants(getGroupFilteredRestaurants(getRestaurants()));
             }
-
-            // 成功找到群組，將其加入本地狀態
-            const newGroup = {
-                id: String(data.id),
-                name: data.name,
-                visibility: data.visibility,
-                invite_code: data.invite_code,
-                user_id: data.user_id,
-                created_at: data.created_at
-            };
-
-            const currentGroups = getGroups();
-            if (!currentGroups.some(g => g.id === newGroup.id)) {
-                currentGroups.push(newGroup);
-                setGroups(currentGroups);
-                // 儲存至 local storage
-                saveGroupsLocal(currentGroups, getCurrentGroupId());
-            }
-
-            // 標記為已加入共享群組 (開放編輯權)
-            localStorage.setItem(`joined_shared_${newGroup.id}`, 'true');
-
-            showToast(`✅ 已成功加入群組：${data.name}`, "success");
-            joinInviteCodeInput.value = "";
-            renderGroupList();
-            
-            // 可選：自動切換至該群組
-            switchGroup(newGroup.id);
-            groupSheetModal.classList.remove("show");
-            renderRestaurants(getGroupFilteredRestaurants(getRestaurants()));
-
         } catch (err) {
             console.error("Join group error:", err);
             showToast("❌ 加入群組時發生錯誤", "error");
         }
-    });
-
-        updateInviteCodeVisibility();
-        groupSheetModal.classList.remove("show");
-        groupFormModal.classList.add("show");
-        groupNameInput.focus();
     });
 
     closeGroupFormModal?.addEventListener("click", closeGroupFormModalHandler);
@@ -549,18 +536,18 @@ function initializeGroupManagement() {
                 }
                 group.name = name;
                 group.visibility = visibility;
-                if (visibility === "shared" && !group.invite_code) {
-                    group.invite_code = generateInviteCode();
-                } else if (visibility !== "shared") {
+                if (visibility === "shared") {
+                    group.invite_code = groupInviteCodeDisplay?.value?.trim() || group.invite_code || generateInviteCode();
+                } else {
                     group.invite_code = null;
                 }
                 saveGroupsLocal(getGroups(), getCurrentGroupId());
                 updateGroupInSupabase(editingGroupId, name, visibility, group.invite_code);
             }
-            showToast("✅ 群組設定已更新", "success");
+            showToast(visibility === "shared" ? `✅ 群組設定已更新！邀請碼：${group.invite_code}` : "✅ 群組設定已更新", "success");
         } else {
             const groupUuid = generateUuid();
-            const inviteCode = visibility === "shared" ? generateInviteCode() : null;
+            const inviteCode = visibility === "shared" ? (groupInviteCodeDisplay?.value?.trim() || generateInviteCode()) : null;
             const newGroup = {
                 id: groupUuid,
                 name,
@@ -600,12 +587,12 @@ function initializeGroupManagement() {
                 });
             }
 
-            showToast(`✅ 已建立並切換到「${name}」`, "success");
+            showToast(visibility === "shared" ? `✅ 群組建立成功！邀請碼：${inviteCode}` : `✅ 已建立並切換到「${name}」`, "success");
         }
 
         closeGroupFormModalHandler();
         updateGroupSwitchButton();
-        renderRestaurants(getRestaurants());
+        renderRestaurants(getGroupFilteredRestaurants(getRestaurants()));
     });
 }
 
@@ -654,6 +641,21 @@ function renderGroupList() {
         });
     });
 
+    // Copy Invite Code button from Group list item
+    groupList.querySelectorAll("[data-copy-invite-code]").forEach(button => {
+        button.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            const code = button.dataset.copyInviteCode;
+            if (!code) return;
+            const ok = await copyToClipboard(code);
+            if (ok) {
+                showToast(`✅ 已複製邀請碼：${code}`, "success");
+            } else {
+                showToast(`❌ 複製失敗，邀請碼為：${code}`, "error");
+            }
+        });
+    });
+
     groupList.querySelectorAll("[data-rename-group-id]").forEach(button => {
         button.addEventListener("click", () => {
             openRenameGroupModal(button.dataset.renameGroupId);
@@ -688,12 +690,20 @@ function renderSingleGroupItem(group, isOthersPublic = false) {
         badges.push(`<span style="font-size: 10px; background: rgba(0,122,255,0.1); color: #007aff; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">👁️ 唯讀</span>`);
     }
 
+    const hasInviteCode = group.visibility === "shared" && group.invite_code;
+
     return `
         <div class="group-list-item ${group.id === getCurrentGroupId() ? "active" : ""}" data-group-id="${escapeHtml(group.id)}">
             <span class="group-list-check">${group.id === getCurrentGroupId() ? "✓" : ""}</span>
             <button type="button" class="group-list-name" data-select-group-id="${escapeHtml(group.id)}">
                 ${escapeHtml(group.name)} ${!isUncategorized ? badges.join("") : ""}
             </button>
+            ${hasInviteCode ? `
+                <button type="button" class="group-invite-code-btn" data-copy-invite-code="${escapeHtml(group.invite_code)}" title="點擊複製邀請碼：${escapeHtml(group.invite_code)}">
+                    <span>${escapeHtml(group.invite_code)}</span>
+                    <span>📋</span>
+                </button>
+            ` : ""}
             ${canEdit ? `
                 <button type="button" class="group-rename-button" data-rename-group-id="${escapeHtml(group.id)}" aria-label="修改群組名稱與設定" title="修改群組名稱與設定">✎</button>
                 <button type="button" class="group-delete-button" data-delete-group-id="${escapeHtml(group.id)}" aria-label="刪除群組" title="刪除群組">🗑️</button>
@@ -725,7 +735,12 @@ function openRenameGroupModal(groupId) {
     // Call invite code visibility check
     const groupInviteCodeField = document.getElementById("groupInviteCodeField");
     const groupInviteCodeDisplay = document.getElementById("groupInviteCodeDisplay");
-    if (group.visibility === "shared" && group.invite_code) {
+    if (group.visibility === "shared") {
+        if (!group.invite_code) {
+            group.invite_code = generateInviteCode();
+            saveGroupsLocal(getGroups(), getCurrentGroupId());
+            updateGroupInSupabase(groupId, undefined, undefined, group.invite_code);
+        }
         if (groupInviteCodeField) groupInviteCodeField.hidden = false;
         if (groupInviteCodeDisplay) groupInviteCodeDisplay.value = group.invite_code;
     } else {
@@ -948,22 +963,7 @@ async function initialize() {
         updateRestaurantImagePreview("");
         renderWeeklyHoursEditor();
 
-        const restaurantGroupField = document.getElementById("restaurantGroupField");
-        const restaurantGroupSelect = document.getElementById("restaurantGroup");
-        if (restaurantGroupField && restaurantGroupSelect) {
-            const allGroups = getGroups();
-            const currentUser = getCurrentUser();
-            const accessibleGroups = allGroups.filter(g => 
-                (currentUser && g.user_id === currentUser.id) || 
-                g.name === UNCATEGORIZED_GROUP_NAME
-            );
-
-            restaurantGroupSelect.innerHTML = accessibleGroups.map(group => 
-                `<option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}</option>`
-            ).join("");
-            restaurantGroupSelect.value = getCurrentGroupId();
-            restaurantGroupField.hidden = false;
-        }
+        // (已移除群組選擇初始化)
 
         document.querySelectorAll("[id^='restaurantMenu']").forEach(input => {
             input.dataset.menuRemoved = "false";
@@ -1045,9 +1045,7 @@ async function initialize() {
         const restaurantData = {
             name: document.getElementById("restaurantName").value.trim(),
             category: document.getElementById("restaurantCategory").value,
-            groupId: editingId
-                ? (document.getElementById("restaurantGroup")?.value || existingRestaurant?.groupId || getCurrentGroupId())
-                : (document.getElementById("restaurantGroup")?.value || getCurrentGroupId()),
+            groupId: getCurrentGroupId(),
             rating: Number(document.getElementById("restaurantRating").value) || null,
             phone: document.getElementById("restaurantPhone").value.trim(),
             address: document.getElementById("restaurantAddress").value.trim(),
@@ -1180,6 +1178,12 @@ async function initialize() {
 
     // Test Supabase connection
     testSupabaseConnection();
+
+    // 未登入狀態強制導向登入視窗，取消訪客狀態
+    if (!getCurrentUser()) {
+        history.replaceState({}, "", "/login");
+        handleRoute();
+    }
 }
 
 // Start the application

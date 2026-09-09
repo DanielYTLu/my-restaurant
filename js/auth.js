@@ -224,6 +224,8 @@ export async function logout() {
         showToast("已成功登出", "success");
         await handleAuthUserChanged(null);
         await resetGroupState();
+        history.replaceState({}, "", "/login");
+        handleRoute();
 
         return true;
     } catch (err) {
@@ -408,7 +410,26 @@ function closeAuthAccountMenu() {
 
 // Route handling for auth views
 function handleRoute() {
-    const path = window.location.pathname;
+    let path = window.location.pathname;
+    const currentUser = getCurrentUser();
+    const closeAuthModal = document.getElementById("closeAuthModal");
+
+    // 若未登入，強制限制在認證相關路徑中，不可返回主應用 "/"
+    const authPaths = ["/login", "/register", "/forgot-password", "/resend-verification", "/reset-password"];
+    if (!currentUser) {
+        if (closeAuthModal) {
+            closeAuthModal.style.display = "none";
+        }
+        if (!authPaths.includes(path)) {
+            path = "/login";
+            history.replaceState({}, "", "/login");
+        }
+    } else {
+        if (closeAuthModal) {
+            closeAuthModal.style.display = "";
+        }
+    }
+
     const loginView = document.getElementById("loginView");
     const registerView = document.getElementById("registerView");
     const forgotView = document.getElementById("forgotView");
@@ -425,7 +446,6 @@ function handleRoute() {
     if (registerView) registerView.hidden = true;
     if (forgotView) forgotView.hidden = true;
     if (resendView) resendView.hidden = true;
-
     if (recoveryView) recoveryView.hidden = true;
 
     if (path === "/login") {
@@ -441,12 +461,11 @@ function handleRoute() {
     } else if (path === "/forgot-password") {
         if (forgotView) forgotView.hidden = false;
         if (authModalTitle) authModalTitle.textContent = "重設密碼";
+        authRouteContainer.hidden = false;
+        document.body.style.overflow = "hidden";
     } else if (path === "/resend-verification") {
         if (resendView) resendView.hidden = false;
         if (authModalTitle) authModalTitle.textContent = "重新發送驗證信";
-        authRouteContainer.hidden = false;
-        document.body.style.overflow = "hidden";
-
         authRouteContainer.hidden = false;
         document.body.style.overflow = "hidden";
     } else if (path === "/reset-password") {
@@ -455,7 +474,12 @@ function handleRoute() {
         authRouteContainer.hidden = false;
         document.body.style.overflow = "hidden";
     } else {
-        // Main app "/"
+        // Main app "/" - 僅在已登入時允許
+        if (!currentUser) {
+            history.replaceState({}, "", "/login");
+            handleRoute();
+            return;
+        }
         if (authRouteContainer && authRouteContainer.contains(document.activeElement)) {
             document.activeElement?.blur();
             const authOpenButton = document.getElementById("authOpenButton");
@@ -599,10 +623,9 @@ export function initializeAuthSystem() {
         }
     });
 
-    updateAuthUI();
-
     if (closeAuthModal) {
         closeAuthModal.addEventListener("click", () => {
+            if (!getCurrentUser()) return; // 未登入不可關閉
             const authOpenButton = document.getElementById("authOpenButton");
             if (authOpenButton) {
                 authOpenButton.focus();
@@ -611,6 +634,11 @@ export function initializeAuthSystem() {
             handleRoute();
         });
     }
+
+    // 監聽瀏覽器前進/後退按鈕
+    window.addEventListener("popstate", () => {
+        handleRoute();
+    });
 
     const registerForm = document.getElementById("registerForm");
     const registerEmail = document.getElementById("registerEmail");
@@ -871,7 +899,15 @@ export function setupAuthStateListener() {
         if (event === "INITIAL_SESSION") {
             if (user) {
                 void handleAuthUserChanged(user);
+            } else {
+                handleRoute();
             }
+            return;
+        }
+
+        if (event === "SIGNED_OUT" || !user) {
+            void handleAuthUserChanged(null);
+            handleRoute();
             return;
         }
 

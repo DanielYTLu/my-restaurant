@@ -54,62 +54,224 @@
 }
 
 /* ==================================================
-   Random Picker Overlay (方案三 - 餐具動畫)
+   Random Picker Overlay (現代高質感輪盤抽籤視窗)
    ================================================== */
 
 .random-picker-overlay {
     position: fixed;
     inset: 0;
     z-index: 5000;
-    background: rgba(247, 247, 245, 0.95);
-    display: none;
+    background: rgba(15, 17, 23, 0.65);
+    display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    padding: 20px;
 }
 
 .random-picker-overlay.show {
-    display: flex;
+    opacity: 1;
+    pointer-events: auto;
 }
 
-.picker-loading-text {
+.picker-dialog {
+    width: 100%;
+    max-width: 380px;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 28px;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 
+        0 24px 60px rgba(0, 0, 0, 0.2),
+        0 0 0 1px rgba(255, 255, 255, 0.35) inset;
+    transform: scale(0.92) translateY(12px);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.random-picker-overlay.show .picker-dialog {
+    transform: scale(1) translateY(0);
+}
+
+.picker-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 22px;
+}
+
+.picker-title {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, #d97706, #b45309, #7c2d12);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.picker-sparkle {
+    font-size: 18px;
+    animation: sparkleTwinkle 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes sparkleTwinkle {
+    0% { transform: scale(0.8) rotate(-10deg); opacity: 0.6; }
+    100% { transform: scale(1.2) rotate(15deg); opacity: 1; }
+}
+
+/* 老虎機滾動視窗 */
+.picker-slot-machine {
+    position: relative;
+    width: 100%;
+    height: 120px;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 20px;
+    border: 2px solid rgba(245, 158, 11, 0.35);
+    box-shadow: 
+        0 8px 24px rgba(245, 158, 11, 0.12),
+        inset 0 4px 12px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.picker-slot-glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(245, 158, 11, 0.18) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.picker-slot-window {
+    width: 100%;
+    padding: 0 16px;
+    z-index: 1;
+}
+
+.picker-rolling-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.12s ease-out, opacity 0.12s ease-out;
+}
+
+.picker-rolling-card.picker-locked {
+    animation: lockWinnerPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes lockWinnerPop {
+    0% { transform: scale(0.85); opacity: 0.8; }
+    50% { transform: scale(1.12); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.picker-rolling-icon {
+    font-size: 32px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
+}
+
+.picker-rolling-name {
     font-size: 20px;
+    font-weight: 800;
+    color: #1e293b;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.picker-rolling-badge {
+    display: inline-block;
+    font-size: 11px;
     font-weight: 600;
-    margin-bottom: 25px;
-    color: #333;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.15);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
-.picker-utensils {
-    display: flex;
-    gap: 15px;
-    font-size: 48px;
+/* 進度條 */
+.picker-progress-track {
+    width: 100%;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 14px;
 }
 
-.picker-utensils span:first-child { 
-    transform-origin: bottom center; 
-    animation: fork-sway 1s ease-in-out infinite; 
-}
-.picker-utensils span:last-child { 
-    transform-origin: bottom center; 
-    animation: spoon-sway 1s ease-in-out infinite; 
-}
-
-@keyframes fork-sway {
-    0%, 100% { transform: rotate(-20deg); }
-    50% { transform: rotate(20deg); }
-}
-@keyframes spoon-sway {
-    0%, 100% { transform: rotate(20deg); }
-    50% { transform: rotate(-20deg); }
+.picker-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #ef4444, #8b5cf6);
+    border-radius: 999px;
+    transition: width 0.08s linear;
 }
 
+.picker-hint {
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* 深色模式適配 */
 [data-theme="dark"] .random-picker-overlay {
-    background: rgba(20, 20, 20, 0.95);
+    background: rgba(8, 10, 15, 0.75);
 }
 
-[data-theme="dark"] .picker-loading-text {
-    color: #f2f2ed;
+[data-theme="dark"] .picker-dialog {
+    background: rgba(30, 32, 40, 0.85);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 
+        0 24px 60px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+[data-theme="dark"] .picker-title {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b, #ea580c);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+[data-theme="dark"] .picker-slot-machine {
+    background: linear-gradient(180deg, #181a22 0%, #11131a 100%);
+    border-color: rgba(245, 158, 11, 0.4);
+    box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.4),
+        inset 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .picker-rolling-name {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .picker-rolling-badge {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, 0.35);
+}
+
+[data-theme="dark"] .picker-progress-track {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .picker-hint {
+    color: #94a3b8;
 }
 
 

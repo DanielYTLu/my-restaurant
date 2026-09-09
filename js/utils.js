@@ -25,6 +25,40 @@ export function generateInviteCode() {
 }
 
 
+// Copy text to clipboard with fallback
+export async function copyToClipboard(text) {
+    if (!text) return false;
+
+    // 1. Try navigator.clipboard
+    if (navigator.clipboard && window.isSecureContext) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (err) {
+            console.warn("navigator.clipboard.writeText 失敗，切換 fallback：", err);
+        }
+    }
+
+    // 2. Fallback to execCommand('copy')
+    try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.top = "-9999px";
+        textArea.style.left = "-9999px";
+        textArea.setAttribute("readonly", "");
+        document.body.appendChild(textArea);
+        textArea.select();
+        textArea.setSelectionRange(0, 99999);
+        const successful = document.execCommand("copy");
+        document.body.removeChild(textArea);
+        return successful;
+    } catch (err) {
+        console.error("Fallback 複製失敗：", err);
+        return false;
+    }
+}
+
 // HTML Escape Function
 export function escapeHtml(value) {
     return String(value)

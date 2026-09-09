@@ -496,9 +496,10 @@
                 <div id="groupInviteCodeField" class="form-field" hidden>
                     <span>邀請碼</span>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="text" id="groupInviteCodeDisplay" readonly style="flex: 1; background: #f0f0f0; cursor: not-allowed;">
-                        <button type="button" id="copyGroupInviteCodeButton" class="group-copy-btn" style="background: rgba(255,165,0,0.15); border: 1px solid #d97706; color: #d97706; padding: 6px 12px; border-radius: 6px; cursor: pointer;">複製</button>
+                        <input type="text" id="groupInviteCodeDisplay" readonly style="flex: 1; background: #f0f0f0; cursor: text; font-family: monospace; font-size: 16px; font-weight: 700; letter-spacing: 2px; text-align: center; border: 1px solid #ccc; border-radius: 8px; padding: 10px;">
+                        <button type="button" id="copyGroupInviteCodeButton" class="group-copy-btn" style="background: rgba(255,165,0,0.15); border: 1px solid #d97706; color: #d97706; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">📋 複製</button>
                     </div>
+                    <p style="font-size: 12px; color: #888; margin-top: 4px; margin-bottom: 0;">可將此 6 位數邀請碼提供給好友，好友即可透過邀請碼加入此群組。</p>
                 </div>
 
                 <div class="group-form-actions">
@@ -718,19 +719,7 @@
 
 
 
-                    <!-- Group (只在編輯時顯示，新增時自動使用目前群組) -->
-
-                    <label class="form-field" id="restaurantGroupField" hidden>
-
-                        <span>
-                            所屬群組
-                        </span>
-
-                        <select
-                            id="restaurantGroup"
-                        ></select>
-
-                    </label>
+                    <!-- Group (已移除) -->
 
 
 
@@ -1377,11 +1366,27 @@
 
 
 <!-- Random Picker Overlay -->
-<div id="randomPickerOverlay" class="random-picker-overlay">
-    <div class="picker-loading-text">正在幫你選一家餐廳...</div>
-    <div class="picker-utensils">
-        <span>🍴</span>
-        <span>🥄</span>
+<div id="randomPickerOverlay" class="random-picker-overlay" aria-hidden="true">
+    <div class="picker-dialog">
+        <div class="picker-header">
+            <span class="picker-sparkle">✨</span>
+            <span class="picker-title">命運之輪旋轉中</span>
+            <span class="picker-sparkle">✨</span>
+        </div>
+        <div class="picker-slot-machine">
+            <div class="picker-slot-glow"></div>
+            <div class="picker-slot-window">
+                <div id="pickerRollingCard" class="picker-rolling-card">
+                    <span id="pickerRollingIcon" class="picker-rolling-icon">🎲</span>
+                    <span id="pickerRollingName" class="picker-rolling-name">尋找美食中...</span>
+                    <span id="pickerRollingCategory" class="picker-rolling-badge">美味精選</span>
+                </div>
+            </div>
+        </div>
+        <div class="picker-progress-track">
+            <div id="pickerProgressBar" class="picker-progress-bar"></div>
+        </div>
+        <div class="picker-hint">正為您挑選命中註定的美味…</div>
     </div>
 </div>
 

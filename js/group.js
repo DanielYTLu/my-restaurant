@@ -39,21 +39,27 @@ export async function loadGroupsFromSupabase() {
                 id: String(row.id),
                 name: row.name || UNCATEGORIZED_GROUP_NAME,
                 visibility: row.visibility || "private",
+                invite_code: row.invite_code || null,
                 user_id: row.user_id || null,
                 created_at: row.created_at || null
             }));
 
             // Filter groups based on auth status
             if (!currentUser) {
-                console.log("👤 當前為匿名狀態，只顯示公開群組與未分類");
-                fetchedGroups = fetchedGroups.filter(g => g.visibility === "public" || g.name === UNCATEGORIZED_GROUP_NAME);
+                console.log("👤 當前為匿名狀態，只顯示公開群組、已加入共享群組與未分類");
+                fetchedGroups = fetchedGroups.filter(g => 
+                    g.visibility === "public" || 
+                    g.name === UNCATEGORIZED_GROUP_NAME ||
+                    (g.visibility === "shared" && localStorage.getItem(`joined_shared_${g.id}`) === "true")
+                );
             } else {
-                // 如果已登入，顯示公開群組以及「我自己的群組」
+                // 如果已登入，顯示公開群組、我自己的群組、已加入共享群組與未分類
                 console.log("👤 當前已登入：", currentUser.email);
                 fetchedGroups = fetchedGroups.filter(g => 
                     g.visibility === "public" || 
                     g.user_id === currentUser.id ||
-                    g.name === UNCATEGORIZED_GROUP_NAME
+                    g.name === UNCATEGORIZED_GROUP_NAME ||
+                    (g.visibility === "shared" && localStorage.getItem(`joined_shared_${g.id}`) === "true")
                 );
             }
 

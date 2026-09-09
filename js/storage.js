@@ -134,6 +134,9 @@ export function loadGroupsFromLocal() {
                 .map(group => ({
                     id: String(group.id),
                     name: String(group.name),
+                    visibility: group.visibility || "private",
+                    invite_code: group.invite_code || null,
+                    user_id: group.user_id || null,
                     created_at: group.created_at || null
                 }))
             : [];
