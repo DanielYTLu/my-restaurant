@@ -1,4 +1,43 @@
 /* ==================================================
+   Enhanced UI Polish & Modern Aesthetics (Non-functional)
+   ================================================== */
+
+.restaurant-card {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease !important;
+}
+
+.restaurant-card:hover {
+    transform: translateY(-4px) scale(1.01) !important;
+    box-shadow: 0 16px 36px rgba(32, 32, 32, 0.1), 0 0 0 1px rgba(245, 158, 11, 0.15) !important;
+    border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+button:active, 
+.btn:active {
+    transform: scale(0.96);
+    transition: transform 0.1s ease;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+}
+
+
+/* ==================================================
    Global Loading Animation
    ================================================== */
 
@@ -15,6 +54,45 @@
 
 
 ﻿/* Components */
+
+/* ==================================================
+    Advanced Polish & Micro-interactions
+    ================================================== */
+.btn-primary, button[type="submit"], .random-picker-btn {
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background-color 0.2s ease !important;
+}
+
+.btn-primary:hover, button[type="submit"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+}
+
+.restaurant-card {
+    border-radius: 20px !important;
+    overflow: hidden;
+    position: relative;
+}
+
+.restaurant-card img {
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.restaurant-card:hover img {
+    transform: scale(1.04);
+}
+
+[data-theme="dark"] .picker-dialog {
+    background: rgba(30, 31, 36, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+[data-theme="dark"] .toast {
+    background: rgba(45, 47, 56, 0.95);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+}
+
 
 /* ==================================================
    Toast Message System
