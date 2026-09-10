@@ -64,11 +64,15 @@ export async function loadGroupsFromSupabase() {
             }
 
             console.log("📊 [loadGroupsFromSupabase] 篩選後的群組：", fetchedGroups);
-            restaurantGroups = fetchedGroups;
-
-            // Ensure uncategorized group exists
-            if (!restaurantGroups.some(g => g.name === UNCATEGORIZED_GROUP_NAME)) {
-                restaurantGroups.unshift({
+            
+            // 確保「未分類」群組唯一，若有多個或同時存在實體與虛擬未分類，進行去重
+            const uncatItems = fetchedGroups.filter(g => g.name === UNCATEGORIZED_GROUP_NAME);
+            if (uncatItems.length > 1) {
+                // 如果有真實資料庫的未分類，優先保留；否則保留第一個
+                const realUncat = uncatItems.find(g => g.id !== "uncategorized-default") || uncatItems[0];
+                fetchedGroups = fetchedGroups.filter(g => g.name !== UNCATEGORIZED_GROUP_NAME || g === realUncat);
+            } else if (uncatItems.length === 0) {
+                fetchedGroups.unshift({
                     id: "uncategorized-default",
                     name: UNCATEGORIZED_GROUP_NAME,
                     visibility: "private",
@@ -77,18 +81,18 @@ export async function loadGroupsFromSupabase() {
                 });
             }
 
+            restaurantGroups = fetchedGroups;
+
             return true;
         } else {
-            // If no groups, ensure uncategorized exists
-            if (!restaurantGroups.some(g => g.name === UNCATEGORIZED_GROUP_NAME)) {
-                restaurantGroups = [{
-                    id: "uncategorized-default",
-                    name: UNCATEGORIZED_GROUP_NAME,
-                    visibility: "private",
-                    user_id: getCurrentUser()?.id || null,
-                    created_at: null
-                }];
-            }
+            // If no groups, ensure uncategorized exists uniquely
+            restaurantGroups = [{
+                id: "uncategorized-default",
+                name: UNCATEGORIZED_GROUP_NAME,
+                visibility: "private",
+                user_id: getCurrentUser()?.id || null,
+                created_at: null
+            }];
             return true;
         }
     } catch (error) {
@@ -226,14 +230,17 @@ export async function joinGroupByInviteCode(inviteCode) {
 
 // Ensure groups are initialized with uncategorized group
 export function ensureGroupsInitialized() {
-    if (restaurantGroups.length === 0 || !restaurantGroups.some(g => g.name === UNCATEGORIZED_GROUP_NAME)) {
-        if (!restaurantGroups.some(g => g.name === UNCATEGORIZED_GROUP_NAME)) {
-            restaurantGroups.unshift({
-                id: "uncategorized-default",
-                name: UNCATEGORIZED_GROUP_NAME,
-                created_at: null
-            });
-        }
+    // 進行去重，確保「未分類」只留一個
+    const uncatItems = restaurantGroups.filter(g => g.name === UNCATEGORIZED_GROUP_NAME);
+    if (uncatItems.length > 1) {
+        const realUncat = uncatItems.find(g => g.id !== "uncategorized-default") || uncatItems[0];
+        restaurantGroups = restaurantGroups.filter(g => g.name !== UNCATEGORIZED_GROUP_NAME || g === realUncat);
+    } else if (restaurantGroups.length === 0 || uncatItems.length === 0) {
+        restaurantGroups.unshift({
+            id: "uncategorized-default",
+            name: UNCATEGORIZED_GROUP_NAME,
+            created_at: null
+        });
     }
 
     const validIds = new Set(restaurantGroups.map(group => group.id));

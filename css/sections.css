@@ -3129,6 +3129,7 @@ body.font-extra-large .card-actions button {
 .app-splash img {
     width: 96px;
     height: 96px;
+    object-fit: contain;
     border-radius: 22px;
     box-shadow: 0 8px 24px rgba(32, 32, 32, 0.1);
 }
