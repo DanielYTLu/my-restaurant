@@ -1,8 +1,8 @@
-# 黑白呷 (My Restaurant) - AI 開發說明書
+# 食光 (My Restaurant) - AI 開發說明書
 
 ## 專案概覽
 
-**黑白呷** 是一個 Progressive Web App (PWA)，用於個人餐廳管理。支援新增、編輯、刪除餐廳資訊，包含菜單圖片、收藏功能、地區群組管理和多裝置雲端同步。
+**食光** 是一個 Progressive Web App (PWA)，用於個人餐廳管理。支援新增、編輯、刪除餐廳資訊，包含菜單圖片、收藏功能、地區群組管理和多裝置雲端同步。
 
 ---
 
@@ -226,7 +226,7 @@ displaySettings = {
 
 ```json
 {
-  "name": "黑白呷",
+  "name": "食光",
   "display": "standalone",
   "start_url": "./",
   "theme_color": "#f7f7f5"

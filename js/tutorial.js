@@ -6,7 +6,7 @@ import { showToast } from './utils.js';
 
 const tutorialSteps = [
     {
-        title: '👋 歡迎使用黑白呷！',
+        title: '👋 歡迎使用食光！',
         content: '我們來快速帶您認識這款美食管理 App，輕鬆記錄並解決每天吃什麼的煩惱！',
         target: null,
         shape: 'rounded',

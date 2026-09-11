@@ -194,7 +194,7 @@ export async function signup(email, password, nickname) {
             if (registerView && loginView && authModalTitle) {
                 registerView.hidden = true;
                 loginView.hidden = false;
-                authModalTitle.textContent = "登入黑白呷";
+                authModalTitle.textContent = "登入食光";
                 if (loginEmail) {
                     loginEmail.value = trimmedEmail;
                 }
@@ -450,12 +450,12 @@ function handleRoute() {
 
     if (path === "/login") {
         if (loginView) loginView.hidden = false;
-        if (authModalTitle) authModalTitle.textContent = "登入黑白呷";
+        if (authModalTitle) authModalTitle.textContent = "登入食光";
         authRouteContainer.hidden = false;
         document.body.style.overflow = "hidden";
     } else if (path === "/register") {
         if (registerView) registerView.hidden = false;
-        if (authModalTitle) authModalTitle.textContent = "註冊黑白呷帳號";
+        if (authModalTitle) authModalTitle.textContent = "註冊食光帳號";
         authRouteContainer.hidden = false;
         document.body.style.overflow = "hidden";
     } else if (path === "/forgot-password") {
@@ -657,7 +657,7 @@ export function initializeAuthSystem() {
         switchToRegisterButton.addEventListener("click", () => {
             loginView.hidden = true;
             registerView.hidden = false;
-            authModalTitle.textContent = "註冊黑白呷帳號";
+            authModalTitle.textContent = "註冊食光帳號";
         });
     }
 
@@ -665,7 +665,7 @@ export function initializeAuthSystem() {
         switchToLoginButton.addEventListener("click", () => {
             registerView.hidden = true;
             loginView.hidden = false;
-            authModalTitle.textContent = "登入黑白呷";
+            authModalTitle.textContent = "登入食光";
         });
     }
 
@@ -740,7 +740,7 @@ export function initializeAuthSystem() {
         backToLoginButton.addEventListener("click", () => {
             forgotView.hidden = true;
             loginView.hidden = false;
-            authModalTitle.textContent = "登入黑白呷";
+            authModalTitle.textContent = "登入食光";
         });
     }
     const resendEmail = document.getElementById("resendEmail");
@@ -761,7 +761,7 @@ export function initializeAuthSystem() {
         backToLoginFromResendButton.addEventListener("click", () => {
             resendView.hidden = true;
             loginView.hidden = false;
-            authModalTitle.textContent = "登入黑白呷";
+            authModalTitle.textContent = "登入食光";
         });
     }
 
