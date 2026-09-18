@@ -8,20 +8,19 @@ module.exports = async (req, res) => {
 
   try {
     // 1. 精準提取名稱：從 "place/" 後面抓取，直到遇到斜線或問號
-    const match = url.match(/place\/([^\/?]+)/);
+    const match = url.match(/place\/([^/?]+)/);
     if (!match) return res.status(400).json({ error: 'Could not extract name from URL' });
     
-    // 將 URL 編碼的字串解碼並替換掉 "+" 號
+    // 解碼名稱
     const queryName = decodeURIComponent(match[1].replace(/\+/g, ' '));
 
-    // 2. 使用 Find Place API 搜尋 (增加 locationbias 以提高搜尋準確度)
+    // 2. 使用 Find Place API 搜尋
     const findPlaceUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(queryName)}&inputtype=textquery&fields=place_id&key=${apiKey}`;
     const findPlaceRes = await fetch(findPlaceUrl);
     const findPlaceData = await findPlaceRes.json();
 
     if (!findPlaceData.candidates || findPlaceData.candidates.length === 0) {
-      // 嘗試退路：如果找不到，嘗試將名稱中的特殊符號移除再搜一次
-      return res.status(404).json({ error: `Place not found for: ${queryName}` });
+      return res.status(404).json({ error: `Place not found for: ${queryName}`, debug: findPlaceData });
     }
 
     const placeId = findPlaceData.candidates[0].place_id;
@@ -42,3 +41,4 @@ module.exports = async (req, res) => {
     res.status(500).json({ error: 'Internal server error: ' + error.message });
   }
 };
+
