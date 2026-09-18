@@ -1023,27 +1023,49 @@ async function initialize() {
     initializeSearch();
     renderCategoryScroll();
 
-    // Handle Web Share Target
+  // Handle Web Share Target
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has("share")) {
-        const sharedTitle = urlParams.get("title");
-        const sharedText = urlParams.get("text");
-        const sharedUrl = urlParams.get("url");
+    const sharedTitle = urlParams.get("title");
+    const sharedText = urlParams.get("text");
+    const sharedUrl = urlParams.get("url");
 
-        if (sharedUrl || sharedText) {
-            const linkToParse = sharedUrl || sharedText;
-            if (linkToParse.includes("maps.app.goo.gl") || linkToParse.includes("google.com/maps")) {
-                AppLoading.show("正在自動讀取地圖資料...");
-                fetch(`/api/parse-map?url=${encodeURIComponent(linkToParse)}`)
-                    .then(res => res.json())
-                    .then(data => {
+    if (sharedUrl || sharedText || sharedTitle || urlParams.has("share")) {
+        const linkToParse = sharedUrl || sharedText || sharedTitle;
+        if (linkToParse && (linkToParse.includes("maps.app.goo.gl") || linkToParse.includes("google.com/maps") || linkToParse.includes("http"))) {
+            AppLoading.show("正在自動讀取地圖資料...");
+            fetch(`/api/parse-map?url=${encodeURIComponent(linkToParse)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (typeof addRestaurantButton !== 'undefined' && addRestaurantButton) {
                         addRestaurantButton.click();
-                        if (data.name) document.getElementById("restaurantName").value = data.name;
-                        if (data.address) document.getElementById("restaurantAddress").value = data.address;
-                        if (data.phone) document.getElementById("restaurantPhone").value = data.phone;
-                    })
-                    .catch(err => console.error("解析失敗", err))
-                    .finally(() => AppLoading.hide());
+                    } else {
+                        const btn = document.getElementById("addRestaurantBtn") || document.querySelector(".add-restaurant-btn");
+                        if (btn) btn.click();
+                    }
+                    if (data.name) {
+                        const nameEl = document.getElementById("restaurantName");
+                        if (nameEl) nameEl.value = data.name;
+                    }
+                    if (data.address) {
+                        const addrEl = document.getElementById("restaurantAddress");
+                        if (addrEl) addrEl.value = data.address;
+                    }
+                    if (data.phone) {
+                        const phoneEl = document.getElementById("restaurantPhone");
+                        if (phoneEl) phoneEl.value = data.phone;
+                    }
+                })
+                .catch(err => console.error("解析失敗", err))
+                .finally(() => AppLoading.hide());
+        } else if (sharedTitle || sharedText) {
+            // 如果分享過來的是一般文字（包含餐廳名稱）
+            const restaurantModal = document.getElementById("restaurantModal");
+            const restaurantForm = document.getElementById("restaurantForm");
+            if (restaurantModal && restaurantForm) {
+                restaurantForm.reset();
+                const nameEl = document.getElementById("restaurantName");
+                if (nameEl) nameEl.value = sharedTitle || sharedText;
+                restaurantModal.classList.add("show");
             }
         }
         // 清除網址參數
