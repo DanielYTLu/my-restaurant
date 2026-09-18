@@ -3,8 +3,12 @@ const APP_SHELL = [
     "./",
     "./index.html",
     "./style.css",
-    "./script.js",
-    "./manifest.json"
+    "./manifest.json",
+    "./js/app.js",
+    "./js/auth.js",
+    "./js/ui.js",
+    "./js/storage.js",
+    "./js/restaurant.js"
 ];
 
 const isFileProtocol = self.location.protocol === "file:";

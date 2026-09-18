@@ -75,6 +75,72 @@ import { initializeRandomPicker } from './randomPicker.js';
 import { WEEK_DAYS, UNCATEGORIZED_GROUP_NAME, ALL_CATEGORIES } from './config.js';
 import { showToast, escapeHtml, generateUuid, generateInviteCode, copyToClipboard } from './utils.js';
 
+
+
+// (已移除之前錯誤插入的片段)
+
+// Handle PWA Share Target
+async function initShareTargetListener() {
+    const parsedUrl = new URL(window.location.href);
+    const sharedUrl = parsedUrl.searchParams.get('url');
+
+    if (sharedUrl) {
+        // 清除 URL 參數以免重新整理時重複觸發
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        console.log('Shared URL detected:', sharedUrl);
+        showToast('正在讀取餐廳資料...', 'info');
+
+        try {
+            // 實際 API 請求 (部署後使用)
+            const response = await fetch(`/api/parse-map?url=${encodeURIComponent(sharedUrl)}`);
+            if (!response.ok) throw new Error('解析失敗');
+            const data = await response.json();
+            
+            /* 測試模式：模擬 API 回傳
+            const data = {
+                name: "測試餐廳",
+                address: "台北市信義區測試路1號",
+                phone: "02-12345678"
+            };
+            console.log('Using mock data for testing');
+            */
+            
+            console.log('Parsed data:', data);
+
+            // 確保 DOM 已經載入，並在需要時查詢
+            const restaurantModal = document.getElementById("restaurantModal");
+            const restaurantForm = document.getElementById("restaurantForm");
+            
+            if (restaurantModal && restaurantForm) {
+                // 開啟新增視窗邏輯
+                delete restaurantForm.dataset.editingId;
+                restaurantForm.reset();
+                const imgEl = document.getElementById("restaurantImage");
+                if (imgEl) imgEl.dataset.imageRemoved = "false";
+                
+                if (typeof updateRestaurantImagePreview === 'function') updateRestaurantImagePreview("");
+                if (typeof renderWeeklyHoursEditor === 'function') renderWeeklyHoursEditor();
+
+                // 填充資料
+                const nameInput = document.getElementById('restaurantName');
+                const addressInput = document.getElementById('restaurantAddress');
+                const phoneInput = document.getElementById('restaurantPhone');
+
+                if (nameInput) nameInput.value = data.name || '';
+                if (addressInput) addressInput.value = data.address || '';
+                if (phoneInput) phoneInput.value = data.phone || '';
+
+                restaurantModal.classList.add("show");
+                showToast('已自動填入餐廳資料', 'success');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('無法自動匯入資料，請手動輸入', 'error');
+        }
+    }
+}
+
 // Weekly hours editor functions
 function renderWeeklyHoursEditor(value = null) {
     const editor = document.getElementById("weeklyHoursEditor");
@@ -898,6 +964,8 @@ async function initialize() {
     console.log("🚀 餐廳管理系統啟動");
 
     // Initialize auth session
+    await initShareTargetListener();
+
     await initializeAuthSession();
 
     // Execute legacy guest storage migration
@@ -954,6 +1022,34 @@ async function initialize() {
     initializeMenuRemoveButtons();
     initializeSearch();
     renderCategoryScroll();
+
+    // Handle Web Share Target
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("share")) {
+        const sharedTitle = urlParams.get("title");
+        const sharedText = urlParams.get("text");
+        const sharedUrl = urlParams.get("url");
+
+        if (sharedUrl || sharedText) {
+            const linkToParse = sharedUrl || sharedText;
+            if (linkToParse.includes("maps.app.goo.gl") || linkToParse.includes("google.com/maps")) {
+                AppLoading.show("正在自動讀取地圖資料...");
+                fetch(`/api/parse-map?url=${encodeURIComponent(linkToParse)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        addRestaurantButton.click();
+                        if (data.name) document.getElementById("restaurantName").value = data.name;
+                        if (data.address) document.getElementById("restaurantAddress").value = data.address;
+                        if (data.phone) document.getElementById("restaurantPhone").value = data.phone;
+                    })
+                    .catch(err => console.error("解析失敗", err))
+                    .finally(() => AppLoading.hide());
+            }
+        }
+        // 清除網址參數
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
 
     // Set up restaurant form
     addRestaurantButton.addEventListener("click", () => {
@@ -1179,9 +1275,10 @@ async function initialize() {
     // Test Supabase connection
     testSupabaseConnection();
 
-    // 未登入狀態強制導向登入視窗，取消訪客狀態
+    // 若未登入，改為顯示登入提示，而非強制 replaceState 導致路由跳轉
     if (!getCurrentUser()) {
-        history.replaceState({}, "", "/login");
+        console.log("使用者未登入，準備顯示登入視窗...");
+        // 確保 handleRoute 內部邏輯不會在應用程式初始化時造成頁面重載
         handleRoute();
     }
 }
