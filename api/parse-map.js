@@ -18,25 +18,23 @@ module.exports = async (req, res) => {
     const $ = cheerio.load(html);
 
     let data = {
-      name: '',
+      name: $('h1').first().text() || $('meta[property="og:title"]').attr('content') || '',
       address: '',
       phone: ''
     };
 
-    // 1. 嘗試從 meta 標籤抓取名稱 (常見於 Google Maps)
-    data.name = $('meta[property="og:title"]').attr('content') || $('h1').text();
-    
-    // 2. 嘗試搜尋特定類別的資料
-    // 透過尋找包含地址與電話圖示的元件來提取
-    $('[data-item-id]').each((i, el) => {
+    // Google Maps 的資訊通常放在擁有特定 aria-label 的區塊中
+    $('[aria-label]').each((i, el) => {
+      const label = $(el).attr('aria-label');
       const text = $(el).text();
-      // 簡單的關鍵字提取
-      if (text.includes('號') || text.includes('路') || text.includes('街') || text.includes('段')) {
-        if (!data.address) data.address = text;
+      
+      // 判斷是否為地址 (包含常見關鍵字)
+      if (label && (label.includes('地址') || label.includes('Address'))) {
+        data.address = text.replace('地址：', '').replace('Address:', '').trim();
       }
-      // 簡單的電話格式判斷 (包含數字或連接線)
-      if (text.match(/(\d{2,4}-?\d{3,4}-?\d{4})/)) {
-        if (!data.phone) data.phone = text.match(/(\d{2,4}-?\d{3,4}-?\d{4})/)[0];
+      // 判斷是否為電話
+      if (label && (label.includes('電話') || label.includes('Phone') || label.includes('號碼'))) {
+        data.phone = text.replace('電話：', '').replace('Phone:', '').replace('號碼：', '').trim();
       }
     });
 
