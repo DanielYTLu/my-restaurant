@@ -7,24 +7,24 @@
 - **前端 (食光 App)**：接收 PWA Share Target 傳來的 URL，顯示 loading 狀態，並呼叫 Vercel 後端 API。
 - **後端 (Vercel Functions)**：
   - 接收 Google Maps 連結。
-  - 使用解析套件讀取網頁內容並提取結構化資料。
+  - 透過 URL 參數解析餐廳名稱（免費且穩定）。
   - 回傳 JSON 資料。
 - **前端 (回填)**：收到 JSON 後自動填充至 `restaurantModal` 表單。
 
 ## 3. 開發階段
 ### 第一階段：後端解析服務 (Vercel)
 - 建立 `/api/parse-map.js` 處理函數。
-- 實作網頁讀取與 HTML 解析。
-- 驗證解析出的結構化 JSON 資料。
+- [完成] 實作網頁 URL 解析邏輯，成功解析餐廳名稱。
+- [完成] 驗證解析出的結構化 JSON 資料。
 
 ### 第二階段：PWA 分享目標整合
-- 修改 `manifest.json` 加入 `share_target`。
-- 在 `app.js` 實作 `initShareTargetListener()` 函數。
+- [完成] 修改 `manifest.json` 加入 `share_target`。
+- [完成] 在 `app.js` 實作分享參數監聽器，支援多種分享參數格式與自動觸發。
 
 ### 第三階段：UI/UX 整合
-- 增加「解析中...」的 Toast 或 Loading 狀態。
-- 若解析失敗，自動跳回空白的新增視窗，確保流程不中斷。
+- [完成] 整合 Loading 狀態與自動填入邏輯。
+- [完成] 增加錯誤處理（無法解析時自動回退）。
 
 ## 4. 風險管理
-- Google Maps 網頁結構變更導致解析失效（需設計錯誤回退機制）。
-- 若解析頻繁，可能需考慮使用 API 或增加 Cache 機制。
+- Google Maps 網址結構變更導致解析失效（已設計 URL 模式匹配回退機制）。
+- 若解析頻繁，目前採用的 URL 模式解析為免費且無流量限制。

@@ -77,67 +77,42 @@ import { showToast, escapeHtml, generateUuid, generateInviteCode, copyToClipboar
 
 
 
-// (已移除之前錯誤插入的片段)
+// (已移?��??�錯誤�??��??�段)
 
-// Handle PWA Share Target
-async function initShareTargetListener() {
-    const parsedUrl = new URL(window.location.href);
-    const sharedUrl = parsedUrl.searchParams.get('url');
+// 移除?��??��??�輯，在 initialize 中統一?��?
+async function handleShareTarget() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const linkToParse = urlParams.get("url") || urlParams.get("text") || urlParams.get("title");
+    
+    if (!linkToParse || !(linkToParse.includes("maps.app.goo.gl") || linkToParse.includes("google.com/maps"))) return;
 
-    if (sharedUrl) {
-        // 清除 URL 參數以免重新整理時重複觸發
-        window.history.replaceState({}, document.title, window.location.pathname);
+    // 清除 URL ?�數
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    console.log('Shared link detected:', linkToParse);
+    AppLoading.show("�?��讀?�地?��???..");
+
+    try {
+        const response = await fetch(`/api/parse-map?url=${encodeURIComponent(linkToParse)}`);
+        if (!response.ok) throw new Error('�??失�?');
+        const data = await response.json();
         
-        console.log('Shared URL detected:', sharedUrl);
-        showToast('正在讀取餐廳資料...', 'info');
+        const btn = document.getElementById("addRestaurantBtn") || document.querySelector(".add-restaurant-btn");
+        if (btn) btn.click();
 
-        try {
-            // 實際 API 請求 (部署後使用)
-            const response = await fetch(`/api/parse-map?url=${encodeURIComponent(sharedUrl)}`);
-            if (!response.ok) throw new Error('解析失敗');
-            const data = await response.json();
-            
-            /* 測試模式：模擬 API 回傳
-            const data = {
-                name: "測試餐廳",
-                address: "台北市信義區測試路1號",
-                phone: "02-12345678"
-            };
-            console.log('Using mock data for testing');
-            */
-            
-            console.log('Parsed data:', data);
+        // 確�? Modal ?��?後�?填�?
+        setTimeout(() => {
+            if (data.name) document.getElementById("restaurantName").value = data.name;
+            if (data.address) document.getElementById("restaurantAddress").value = data.address;
+            if (data.phone) document.getElementById("restaurantPhone").value = data.phone;
+            AppLoading.hide();
+            showToast('已自?�填?��?廳�?訊�?', 'success');
+        }, 800);
 
-            // 確保 DOM 已經載入，並在需要時查詢
-            const restaurantModal = document.getElementById("restaurantModal");
-            const restaurantForm = document.getElementById("restaurantForm");
-            
-            if (restaurantModal && restaurantForm) {
-                // 開啟新增視窗邏輯
-                delete restaurantForm.dataset.editingId;
-                restaurantForm.reset();
-                const imgEl = document.getElementById("restaurantImage");
-                if (imgEl) imgEl.dataset.imageRemoved = "false";
-                
-                if (typeof updateRestaurantImagePreview === 'function') updateRestaurantImagePreview("");
-                if (typeof renderWeeklyHoursEditor === 'function') renderWeeklyHoursEditor();
-
-                // 填充資料
-                const nameInput = document.getElementById('restaurantName');
-                const addressInput = document.getElementById('restaurantAddress');
-                const phoneInput = document.getElementById('restaurantPhone');
-
-                if (nameInput) nameInput.value = data.name || '';
-                if (addressInput) addressInput.value = data.address || '';
-                if (phoneInput) phoneInput.value = data.phone || '';
-
-                restaurantModal.classList.add("show");
-                showToast('已自動填入餐廳資料', 'success');
-            }
-        } catch (error) {
-            console.error(error);
-            showToast('無法自動匯入資料，請手動輸入', 'error');
-        }
+    } catch (error) {
+        console.error('Share Target Error:', error);
+        AppLoading.hide();
+        showToast('?��??��??�入?��?資�?，�??��??��???, 'error');
     }
 }
 
@@ -152,13 +127,13 @@ function renderWeeklyHoursEditor(value = null) {
 
         return `
             <div class="hours-day-row" data-day="${day.key}">
-                <span class="hours-day-name">星期${day.label}</span>
+                <span class="hours-day-name">?��?${day.label}</span>
                 <button type="button" class="hours-open-toggle ${hours.open ? "is-open" : ""}" data-open="${hours.open}">
-                    ${hours.open ? "🟢 營業" : "⚪ 公休"}
+                    ${hours.open ? "?�� ?�業" : "???��?"}
                 </button>
                 <div class="hours-time-fields" ${hours.open ? "" : "hidden"}>
                     <input type="time" class="hours-start" value="${hours.start}">
-                    <span>～</span>
+                    <span>�?/span>
                     <input type="time" class="hours-end" value="${hours.end}">
                 </div>
             </div>
@@ -179,7 +154,7 @@ function renderWeeklyHoursEditor(value = null) {
 
             button.dataset.open = String(isOpen);
             button.classList.toggle("is-open", isOpen);
-            button.textContent = isOpen ? "🟢 營業" : "⚪ 公休";
+            button.textContent = isOpen ? "?�� ?�業" : "???��?";
             timeFields.hidden = !isOpen;
         });
     });
@@ -194,7 +169,7 @@ function readWeeklyHoursFromEditor() {
         const end = row.querySelector(".hours-end").value;
 
         if (open && (!start || !end || start >= end)) {
-            throw new Error(`星期${row.querySelector(".hours-day-name").textContent.replace("星期", "")}的營業時間不完整或有誤`);
+            throw new Error(`?��?${row.querySelector(".hours-day-name").textContent.replace("?��?", "")}?��?業�??��?完整?��?誤`);
         }
 
         weeklyHours[row.dataset.day] = { open, start: open ? start : "", end: open ? end : "" };
@@ -210,7 +185,7 @@ function initializeWeeklyHours() {
         const end = document.getElementById("quickHoursEnd").value;
 
         if (selectedDays.length === 0 || !start || !end || start >= end) {
-            alert("請選擇日期並設定正確的開始與結束時間。");
+            alert("請選?�日?�並設�?�?��?��?始�?結�??��???);
             return;
         }
 
@@ -220,7 +195,7 @@ function initializeWeeklyHours() {
 
             toggle.dataset.open = "true";
             toggle.classList.add("is-open");
-            toggle.textContent = "🟢 營業";
+            toggle.textContent = "?�� ?�業";
             row.querySelector(".hours-time-fields").hidden = false;
             row.querySelector(".hours-start").value = start;
             row.querySelector(".hours-end").value = end;
@@ -249,7 +224,7 @@ function closeRestaurantModal() {
 
     delete restaurantForm.dataset.editingId;
 
-    // (已移除群組選單邏輯)
+    // (已移?�群組選?��?�?
 
     updateMenuPreview(1, "");
     updateMenuPreview(2, "");
@@ -265,7 +240,7 @@ function showRestaurantDetail(restaurant) {
     overlay.innerHTML = `
         <div class="detail-sheet">
             <div class="detail-header">
-                <button class="detail-close">×</button>
+                <button class="detail-close">?</button>
             </div>
             <div class="detail-main-image">
                 <img src="${restaurant.image || ""}" alt="${restaurant.name}">
@@ -274,48 +249,48 @@ function showRestaurantDetail(restaurant) {
                 <div class="detail-title-row">
                     <div>
                         <h2>${restaurant.name}</h2>
-                        <p class="detail-rating">★ ${restaurant.rating || "—"}</p>
+                        <p class="detail-rating">??${restaurant.rating || "??}</p>
                     </div>
                     <span class="tag">${restaurant.category}</span>
                 </div>
                 <button class="detail-menu-button">
                     <div>
-                        <strong>📖 查看菜單</strong>
-                        <span>${menuCount > 0 ? `${menuCount} 張菜單圖片` : "尚未新增菜單"}</span>
+                        <strong>?? ?��??�單</strong>
+                        <span>${menuCount > 0 ? `${menuCount} 張�??��??�` : "尚未?��??�單"}</span>
                     </div>
-                    <span>→</span>
+                    <span>??/span>
                 </button>
                 <div class="info-list">
                     <div class="info-item">
-                        <span>📍</span>
+                        <span>??</span>
                         <div>
-                            <small>地址</small>
-                            <p>${restaurant.address || "尚未提供"}</p>
+                            <small>?��?</small>
+                            <p>${restaurant.address || "尚未?��?"}</p>
                         </div>
                     </div>
                     <div class="info-item">
-                        <span>🕐</span>
+                        <span>??</span>
                         <div>
-                            <small>營業時間</small>
+                            <small>?�業?��?</small>
                             <p>${getRestaurantHoursSummary(restaurant)}</p>
                         </div>
                     </div>
                     <div class="info-item">
-                        <span>☎</span>
+                        <span>??/span>
                         <div>
-                            <small>電話</small>
-                            <p>${restaurant.phone || "尚未提供"}</p>
+                            <small>?�話</small>
+                            <p>${restaurant.phone || "尚未?��?"}</p>
                         </div>
                     </div>
                 </div>
                 <div class="description">
-                    <h3>我的備註</h3>
-                    <p>${restaurant.description || "尚未新增備註"}</p>
+                    <h3>?��??�註</h3>
+                    <p>${restaurant.description || "尚未?��??�註"}</p>
                 </div>
                 <div class="detail-actions">
-                    <button class="detail-map-button">📍 Google Maps</button>
-                    <button class="detail-edit-button">✏️ 編輯餐廳</button>
-                    <button class="detail-delete-button">🗑️ 刪除餐廳</button>
+                    <button class="detail-map-button">?? Google Maps</button>
+                    <button class="detail-edit-button">?��? 編輯餐廳</button>
+                    <button class="detail-delete-button">??�??�除餐廳</button>
                 </div>
             </div>
         </div>
@@ -327,7 +302,7 @@ function showRestaurantDetail(restaurant) {
 
     overlay.querySelector(".detail-menu-button").addEventListener("click", () => {
         if (!restaurant.menuImages || restaurant.menuImages.length === 0) {
-            alert("這間餐廳目前還沒有菜單圖片。");
+            alert("?��?餐廳?��??��??��??��??��?);
             return;
         }
         overlay.remove();
@@ -338,13 +313,13 @@ function showRestaurantDetail(restaurant) {
         if (restaurant.maps) {
             window.open(restaurant.maps, "_blank");
         } else {
-            alert("尚未設定 Google Maps");
+            alert("尚未設�? Google Maps");
         }
     });
 
     overlay.querySelector(".detail-edit-button").addEventListener("click", () => {
         if (!canEditCurrentGroup()) {
-            showToast("唯讀模式，無法編輯餐廳");
+            showToast("?��?模�?，無法編輯�?�?);
             return;
         }
         overlay.remove();
@@ -364,7 +339,7 @@ function openEditRestaurant(restaurant) {
     document.getElementById("restaurantName").value = restaurant.name || "";
     document.getElementById("restaurantCategory").value = restaurant.category || "";
 
-    // (已移除群組選單邏輯)
+    // (已移?�群組選?��?�?
 
     document.getElementById("restaurantRating").value = restaurant.rating ?? "";
     document.getElementById("restaurantPhone").value = restaurant.phone || "";
@@ -390,24 +365,24 @@ function openEditRestaurant(restaurant) {
 
 async function deleteRestaurant(id) {
     if (!canEditCurrentGroup()) {
-        showToast("唯讀模式，無法刪除餐廳");
+        showToast("?��?模�?，無法刪?��?�?);
         return;
     }
 
     const restaurant = getRestaurants().find(r => String(r.id) === String(id));
     if (!restaurant) {
-        alert("找不到要刪除的餐廳。");
+        alert("?��??��??�除?��?廳�?);
         return;
     }
 
-    if (!confirm(`確定要刪除「${restaurant.name}」嗎？`)) {
+    if (!confirm(`確�?要刪?��?{restaurant.name}?��?？`)) {
         return;
     }
 
     if (isSupabaseConnected()) {
         const success = await deleteRestaurantFromSupabase(id);
         if (!success) {
-            alert("❌ 餐廳刪除失敗，請檢查網路連線。");
+            alert("??餐廳?�除失�?，�?檢查網路?????);
             return;
         }
         await loadRestaurantsFromSupabase();
@@ -416,7 +391,7 @@ async function deleteRestaurant(id) {
         setRestaurants(restaurants);
         cleanDisplayOrder(restaurants);
         saveRestaurantsLocal(restaurants);
-        alert("⚠️ Supabase 尚未連線，目前只從本機刪除。");
+        alert("?��? Supabase 尚未???，目?�只從本機刪?��?);
     }
 
     renderRestaurants(getRestaurants());
@@ -490,9 +465,9 @@ function initializeGroupManagement() {
         
         const ok = await copyToClipboard(code);
         if (ok) {
-            showToast(`✅ 已複製邀請碼：${code}`, "success");
+            showToast(`??已�?製�?請碼�?{code}`, "success");
         } else {
-            showToast(`❌ 複製失敗，邀請碼為：${code}`, "error");
+            showToast(`??複製失�?，�?請碼?��?${code}`, "error");
         }
     });
 
@@ -504,12 +479,12 @@ function initializeGroupManagement() {
 
     addGroupButton?.addEventListener("click", () => {
         if (!getCurrentUser()) {
-            alert("⚠️ 請先登入帳號後再建立群組！");
+            alert("?��? 請�??�入帳�?後�?建�?群�?�?);
             return;
         }
         delete groupForm.dataset.editingGroupId;
-        groupFormTitle.textContent = "新增群組";
-        submitGroupFormButton.textContent = "建立";
+        groupFormTitle.textContent = "?��?群�?";
+        submitGroupFormButton.textContent = "建�?";
         groupNameInput.value = "";
         if (groupVisibilitySelect) groupVisibilitySelect.value = "private";
         if (groupInviteCodeDisplay) groupInviteCodeDisplay.value = "";
@@ -550,7 +525,7 @@ function initializeGroupManagement() {
     joinGroupButton?.addEventListener("click", async () => {
         const inviteCode = joinInviteCodeInput?.value.trim().toUpperCase();
         if (!inviteCode || inviteCode.length !== 6) {
-            showToast("❌ 請輸入有效的 6 位數邀請碼", "error");
+            showToast("??請輸?��??��? 6 位數?�請碼", "error");
             return;
         }
 
@@ -569,7 +544,7 @@ function initializeGroupManagement() {
             }
         } catch (err) {
             console.error("Join group error:", err);
-            showToast("❌ 加入群組時發生錯誤", "error");
+            showToast("???�入群�??�發?�錯�?, "error");
         }
     });
 
@@ -596,7 +571,7 @@ function initializeGroupManagement() {
             const group = getGroups().find(candidate => candidate.id === editingGroupId);
             if (group) {
                 if (group.name === UNCATEGORIZED_GROUP_NAME) {
-                    alert("「未分類」群組不能修改。");
+                    alert("?�未?��??�群組�??�修?��?);
                     closeGroupFormModalHandler();
                     return;
                 }
@@ -610,7 +585,7 @@ function initializeGroupManagement() {
                 saveGroupsLocal(getGroups(), getCurrentGroupId());
                 updateGroupInSupabase(editingGroupId, name, visibility, group.invite_code);
             }
-            showToast(visibility === "shared" ? `✅ 群組設定已更新！邀請碼：${group.invite_code}` : "✅ 群組設定已更新", "success");
+            showToast(visibility === "shared" ? `??群�?設�?已更?��??�請碼�?{group.invite_code}` : "??群�?設�?已更??, "success");
         } else {
             const groupUuid = generateUuid();
             const inviteCode = visibility === "shared" ? (groupInviteCodeDisplay?.value?.trim() || generateInviteCode()) : null;
@@ -653,7 +628,7 @@ function initializeGroupManagement() {
                 });
             }
 
-            showToast(visibility === "shared" ? `✅ 群組建立成功！邀請碼：${inviteCode}` : `✅ 已建立並切換到「${name}」`, "success");
+            showToast(visibility === "shared" ? `??群�?建�??��?！�?請碼�?{inviteCode}` : `??已建立並?��??��?{name}?�`, "success");
         }
 
         closeGroupFormModalHandler();
@@ -688,12 +663,12 @@ function renderGroupList() {
     let htmlOutput = "";
 
     if (myGroups.length > 0) {
-        htmlOutput += `<div class="group-section-title">我的群組</div>`;
+        htmlOutput += `<div class="group-section-title">?��?群�?</div>`;
         htmlOutput += myGroups.map(group => renderSingleGroupItem(group)).join("");
     }
 
     if (publicGroups.length > 0) {
-        htmlOutput += `<div class="group-section-title">公開群組</div>`;
+        htmlOutput += `<div class="group-section-title">?��?群�?</div>`;
         htmlOutput += publicGroups.map(group => renderSingleGroupItem(group, true)).join("");
     }
 
@@ -715,9 +690,9 @@ function renderGroupList() {
             if (!code) return;
             const ok = await copyToClipboard(code);
             if (ok) {
-                showToast(`✅ 已複製邀請碼：${code}`, "success");
+                showToast(`??已�?製�?請碼�?{code}`, "success");
             } else {
-                showToast(`❌ 複製失敗，邀請碼為：${code}`, "error");
+                showToast(`??複製失�?，�?請碼?��?${code}`, "error");
             }
         });
     });
@@ -745,34 +720,34 @@ function renderSingleGroupItem(group, isOthersPublic = false) {
 
     const badges = [];
     if (group.visibility === "public") {
-        badges.push(`<span style="font-size: 10px; background: rgba(0,128,0,0.1); color: green; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">🌐 公開</span>`);
+        badges.push(`<span style="font-size: 10px; background: rgba(0,128,0,0.1); color: green; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">?? ?��?</span>`);
     } else if (group.visibility === "shared") {
-        badges.push(`<span style="font-size: 10px; background: rgba(255,165,0,0.15); color: #d97706; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">🔗 共享</span>`);
+        badges.push(`<span style="font-size: 10px; background: rgba(255,165,0,0.15); color: #d97706; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">?? ?�享</span>`);
     } else {
-        badges.push(`<span style="font-size: 10px; background: rgba(128,128,128,0.1); color: gray; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">🔒 私人</span>`);
+        badges.push(`<span style="font-size: 10px; background: rgba(128,128,128,0.1); color: gray; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">?? 私人</span>`);
     }
 
     if (isReadonly) {
-        badges.push(`<span style="font-size: 10px; background: rgba(0,122,255,0.1); color: #007aff; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">👁️ 唯讀</span>`);
+        badges.push(`<span style="font-size: 10px; background: rgba(0,122,255,0.1); color: #007aff; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">??�??��?</span>`);
     }
 
     const hasInviteCode = group.visibility === "shared" && group.invite_code;
 
     return `
         <div class="group-list-item ${group.id === getCurrentGroupId() ? "active" : ""}" data-group-id="${escapeHtml(group.id)}">
-            <span class="group-list-check">${group.id === getCurrentGroupId() ? "✓" : ""}</span>
+            <span class="group-list-check">${group.id === getCurrentGroupId() ? "?? : ""}</span>
             <button type="button" class="group-list-name" data-select-group-id="${escapeHtml(group.id)}">
                 ${escapeHtml(group.name)} ${!isUncategorized ? badges.join("") : ""}
             </button>
             ${hasInviteCode ? `
-                <button type="button" class="group-invite-code-btn" data-copy-invite-code="${escapeHtml(group.invite_code)}" title="點擊複製邀請碼：${escapeHtml(group.invite_code)}">
+                <button type="button" class="group-invite-code-btn" data-copy-invite-code="${escapeHtml(group.invite_code)}" title="點�?複製?�請碼�?{escapeHtml(group.invite_code)}">
                     <span>${escapeHtml(group.invite_code)}</span>
-                    <span>📋</span>
+                    <span>??</span>
                 </button>
             ` : ""}
             ${canEdit ? `
-                <button type="button" class="group-rename-button" data-rename-group-id="${escapeHtml(group.id)}" aria-label="修改群組名稱與設定" title="修改群組名稱與設定">✎</button>
-                <button type="button" class="group-delete-button" data-delete-group-id="${escapeHtml(group.id)}" aria-label="刪除群組" title="刪除群組">🗑️</button>
+                <button type="button" class="group-rename-button" data-rename-group-id="${escapeHtml(group.id)}" aria-label="修改群�??�稱?�設�? title="修改群�??�稱?�設�?>??/button>
+                <button type="button" class="group-delete-button" data-delete-group-id="${escapeHtml(group.id)}" aria-label="?�除群�?" title="?�除群�?">??�?/button>
             ` : ""}
         </div>
     `;
@@ -791,8 +766,8 @@ function openRenameGroupModal(groupId) {
     const groupFormModal = document.getElementById("groupFormModal");
 
     groupForm.dataset.editingGroupId = groupId;
-    groupFormTitle.textContent = "修改群組名稱與設定";
-    submitGroupFormButton.textContent = "儲存";
+    groupFormTitle.textContent = "修改群�??�稱?�設�?;
+    submitGroupFormButton.textContent = "?��?";
     groupNameInput.value = group.name;
     if (groupVisibilitySelect) {
         groupVisibilitySelect.value = group.visibility || "private";
@@ -836,24 +811,24 @@ export function renderCategoryScroll() {
     let html = `
         <button
             class="category active"
-            data-category="全部"
+            data-category="?�部"
             type="button"
         >
-            <span class="category-icon">🍽️</span>
-            <span>全部</span>
+            <span class="category-icon">?���?/span>
+            <span>?�部</span>
         </button>
         <button
             class="category"
-            data-category="收藏"
+            data-category="?��?"
             type="button"
         >
-            <span class="category-icon">❤️</span>
-            <span>收藏</span>
+            <span class="category-icon">?��?</span>
+            <span>?��?</span>
         </button>
     `;
 
     visibleCats.forEach(catName => {
-        const icon = iconMap[catName] || "🏷️";
+        const icon = iconMap[catName] || "?���?;
         html += `
             <button
                 class="category"
@@ -881,12 +856,12 @@ function initializeCategories() {
             const category = categoryButton.dataset.category;
             const restaurants = getRestaurants();
 
-            if (category === "全部") {
+            if (category === "?�部") {
                 renderRestaurants(getGroupFilteredRestaurants(restaurants));
                 return;
             }
 
-            if (category === "收藏") {
+            if (category === "?��?") {
                 const favoriteRestaurants = restaurants.filter(r => r.favorite === true);
                 renderRestaurants(getGroupFilteredRestaurants(favoriteRestaurants));
                 return;
@@ -906,10 +881,10 @@ export function renderOrderEditor() {
 
     orderList.innerHTML = orderedRestaurants.map((restaurant, index) => `
         <div class="order-item" draggable="true" data-order-id="${restaurant.id}">
-            <span class="order-drag-handle">☰</span>
-            <span class="order-item-name">${restaurant.name || "未命名餐廳"}</span>
-            <button type="button" class="order-move-button" data-direction="up" ${index === 0 ? "disabled" : ""}>↑</button>
-            <button type="button" class="order-move-button" data-direction="down" ${index === orderedRestaurants.length - 1 ? "disabled" : ""}>↓</button>
+            <span class="order-drag-handle">??/span>
+            <span class="order-item-name">${restaurant.name || "?�命?��?�?}</span>
+            <button type="button" class="order-move-button" data-direction="up" ${index === 0 ? "disabled" : ""}>??/button>
+            <button type="button" class="order-move-button" data-direction="down" ${index === orderedRestaurants.length - 1 ? "disabled" : ""}>??/button>
         </div>
     `).join("");
 
@@ -961,10 +936,10 @@ function renderOrderEditorButtons() {
 
 // Main initialization function
 async function initialize() {
-    console.log("🚀 餐廳管理系統啟動");
+    console.log("?? 餐廳管�?系統?��?");
 
     // Initialize auth session
-    await initShareTargetListener();
+    await handleShareTarget();
 
     await initializeAuthSession();
 
@@ -979,7 +954,7 @@ async function initialize() {
     try {
         await loadGroupsFromSupabase();
     } catch (error) {
-        console.error("❌ 群組載入錯誤：", error);
+        console.error("??群�?載入?�誤�?, error);
     }
 
     ensureGroupsInitialized();
@@ -989,15 +964,15 @@ async function initialize() {
     try {
         initializeAnnouncements();
     } catch (err) {
-        console.error("❌ 公告系統初始化錯誤：", err);
+        console.error("???��?系統?��??�錯誤�?", err);
     }
 
     // Load restaurants
-    AppLoading.show("正在尋找美食清單...");
+    AppLoading.show("�?��尋找美�?清單...");
     try {
         await loadRestaurantsFromSupabase();
     } catch (error) {
-        console.error("❌ 餐廳資料載入失敗：", error);
+        console.error("??餐廳資�?載入失�?�?, error);
         const restaurants = loadRestaurantsFromLocal();
         setRestaurants(restaurants);
     } finally {
@@ -1023,179 +998,30 @@ async function initialize() {
     initializeSearch();
     renderCategoryScroll();
 
-  // Handle Web Share Target
-    const urlParams = new URLSearchParams(window.location.search);
-    const sharedTitle = urlParams.get("title");
-    const sharedText = urlParams.get("text");
-    const sharedUrl = urlParams.get("url");
-
-    if (sharedUrl || sharedText || sharedTitle || urlParams.has("share")) {
-        const linkToParse = sharedUrl || sharedText || sharedTitle;
-        if (linkToParse && (linkToParse.includes("maps.app.goo.gl") || linkToParse.includes("google.com/maps") || linkToParse.includes("http"))) {
-            AppLoading.show("正在自動讀取地圖資料...");
-            fetch(`/api/parse-map?url=${encodeURIComponent(linkToParse)}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (typeof addRestaurantButton !== 'undefined' && addRestaurantButton) {
-                        addRestaurantButton.click();
-                    } else {
-                        const btn = document.getElementById("addRestaurantBtn") || document.querySelector(".add-restaurant-btn");
-                        if (btn) btn.click();
-                    }
-                    if (data.name) {
-                        const nameEl = document.getElementById("restaurantName");
-                        if (nameEl) nameEl.value = data.name;
-                    }
-                    if (data.address) {
-                        const addrEl = document.getElementById("restaurantAddress");
-                        if (addrEl) addrEl.value = data.address;
-                    }
-                    if (data.phone) {
-                        const phoneEl = document.getElementById("restaurantPhone");
-                        if (phoneEl) phoneEl.value = data.phone;
-                    }
-                })
-                .catch(err => console.error("解析失敗", err))
-                .finally(() => AppLoading.hide());
-        } else if (sharedTitle || sharedText) {
-            // 如果分享過來的是一般文字（包含餐廳名稱）
-            const restaurantModal = document.getElementById("restaurantModal");
-            const restaurantForm = document.getElementById("restaurantForm");
-            if (restaurantModal && restaurantForm) {
-                restaurantForm.reset();
-                const nameEl = document.getElementById("restaurantName");
-                if (nameEl) nameEl.value = sharedTitle || sharedText;
-                restaurantModal.classList.add("show");
-            }
-        }
-        // 清除網址參數
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
-
-    // Set up restaurant form
-    addRestaurantButton.addEventListener("click", () => {
-        delete restaurantForm.dataset.editingId;
-        restaurantForm.reset();
-        document.getElementById("restaurantImage").dataset.imageRemoved = "false";
-        updateRestaurantImagePreview("");
-        renderWeeklyHoursEditor();
-
-        // (已移除群組選擇初始化)
-
-        document.querySelectorAll("[id^='restaurantMenu']").forEach(input => {
-            input.dataset.menuRemoved = "false";
-        });
-
-        updateMenuPreview(1, "");
-        updateMenuPreview(2, "");
-        updateMenuPreview(3, "");
-
-        restaurantModal.classList.add("show");
-    });
-
-    closeModal.addEventListener("click", closeRestaurantModal);
-    restaurantModal.addEventListener("click", event => {
-        if (event.target === restaurantModal) {
-            closeRestaurantModal();
-        }
-    });
-
-    // Restaurant form submission
-    restaurantForm.addEventListener("submit", async event => {
-        event.preventDefault();
-        AppLoading.show("正在幫你存好這家店…");
-        
-        const editingId = restaurantForm.dataset.editingId;
-        const menuInputs = [
-            document.getElementById("restaurantMenu1"),
-            document.getElementById("restaurantMenu2"),
-            document.getElementById("restaurantMenu3")
-        ];
-
-        const selectedMenuFiles = menuInputs.map(input =>
-            input && input.files && input.files.length > 0 ? input.files[0] : null
-        );
-
-        const existingRestaurant = editingId
-            ? getRestaurants().find(r => String(r.id) === String(editingId))
-            : null;
-
-        let restaurantImage;
-        let menuImages;
-
-        try {
-            // Process main image
-            if (document.getElementById("restaurantImage").files && document.getElementById("restaurantImage").files.length > 0) {
-                if (getCurrentUser()) {
-                    restaurantImage = await uploadImageToSupabaseStorage(document.getElementById("restaurantImage").files[0]);
-                } else {
-                    restaurantImage = await readFileAsDataUrl(document.getElementById("restaurantImage").files[0]);
-                }
-            } else if (document.getElementById("restaurantImage").dataset.imageRemoved === "true") {
-                restaurantImage = "";
-            } else {
-                restaurantImage = existingRestaurant?.image || "";
-            }
-
-            // Process menu images
-            menuImages = await Promise.all(
-                selectedMenuFiles.map(async (file, index) => {
-                    if (file) {
-                        return getCurrentUser() ? await uploadImageToSupabaseStorage(file) : await readFileAsDataUrl(file);
-                    }
-                    if (menuInputs[index]?.dataset.menuRemoved === "true") {
-                        return null;
-                    }
-                    return existingRestaurant?.menuImages?.[index] || "";
-                })
-            );
-            menuImages = menuImages.filter(Boolean);
-        } catch (error) {
-            AppLoading.hide();
-            console.error("❌ 圖片處理失敗，儲存中止：", error);
-            alert("圖片上傳失敗，請稍後再試。");
-            return;
-        }
-
-        const weeklyHours = readWeeklyHoursFromEditor();
-
-        const restaurantData = {
-            name: document.getElementById("restaurantName").value.trim(),
-            category: document.getElementById("restaurantCategory").value,
-            groupId: getCurrentGroupId(),
-            rating: Number(document.getElementById("restaurantRating").value) || null,
-            phone: document.getElementById("restaurantPhone").value.trim(),
-            address: document.getElementById("restaurantAddress").value.trim(),
-            hours: weeklyHours,
-            maps: document.getElementById("restaurantMaps").value.trim(),
-            image: restaurantImage,
-            menuImages: menuImages,
-            description: document.getElementById("restaurantDescription").value.trim()
-        };
+  // Handle Web Share Target (REPLACED)
 
         if (editingId) {
-            console.log("✏️ 開始更新餐廳：", editingId);
+            console.log("?��? ?��??�新餐廳�?, editingId);
 
             if (isSupabaseConnected()) {
                 const updatedRestaurant = await updateRestaurantInSupabase(editingId, restaurantData);
 
                 if (!updatedRestaurant) {
                     AppLoading.hide();
-                    alert("❌ 餐廳更新失敗，請檢查網路連線。");
+                    alert("??餐廳?�新失�?，�?檢查網路?????);
                     return;
                 }
 
-                console.log("☁️ 餐廳已成功更新到 Supabase：", updatedRestaurant);
+                console.log("?��? 餐廳已�??�更?�到 Supabase�?, updatedRestaurant);
                 await loadRestaurantsFromSupabase();
                 renderRestaurants(getGroupFilteredRestaurants(getRestaurants()));
                 closeRestaurantModal();
-                alert("✅ 餐廳資料已更新！");
+                alert("??餐廳資�?已更?��?");
             } else {
                 const index = getRestaurants().findIndex(r => String(r.id) === String(editingId));
                 if (index === -1) {
                     AppLoading.hide();
-                    alert("找不到要編輯的餐廳。");
+                    alert("?��??��?編輯?��?廳�?);
                     return;
                 }
 
@@ -1205,7 +1031,7 @@ async function initialize() {
                 saveRestaurantsLocal(restaurants);
                 renderRestaurants(getGroupFilteredRestaurants(restaurants));
                 closeRestaurantModal();
-                alert("⚠️ Supabase 尚未連線，目前只儲存在本機。");
+                alert("?��? Supabase 尚未???，目?�只?��??�本機�?);
             }
         } else {
             const newRestaurant = {
@@ -1214,22 +1040,22 @@ async function initialize() {
                 favorite: false
             };
 
-            console.log("➕ 開始新增餐廳：", newRestaurant);
+            console.log("???��??��?餐廳�?, newRestaurant);
 
             if (isSupabaseConnected()) {
                 if (!getCurrentUser()) {
-                    alert("⚠️ 請先登入帳號後再新增餐廳！");
+                    alert("?��? 請�??�入帳�?後�??��?餐廳�?);
                     return;
                 }
 
                 const saved = await createRestaurantInSupabase(newRestaurant);
 
                 if (saved) {
-                    console.log("☁️ 新餐廳已成功同步到 Supabase：", saved);
+                    console.log("?��? ?��?廳已?��??�步??Supabase�?, saved);
                     await loadRestaurantsFromSupabase();
                     renderRestaurants(getGroupFilteredRestaurants(getRestaurants()));
                     closeRestaurantModal();
-                    alert("✅ 餐廳已成功新增！");
+                    alert("??餐廳已�??�新增�?");
                 } else {
                     const restaurants = getRestaurants();
                     restaurants.unshift(newRestaurant);
@@ -1237,7 +1063,7 @@ async function initialize() {
                     saveRestaurantsLocal(restaurants);
                     renderRestaurants(getGroupFilteredRestaurants(restaurants));
                     closeRestaurantModal();
-                    alert("⚠️ 餐廳已暫存，但無法同步到 Supabase。");
+                    alert("?��? 餐廳已暫存�?但無法�?步到 Supabase??);
                 }
             } else {
                 const restaurants = getRestaurants();
@@ -1246,7 +1072,7 @@ async function initialize() {
                 saveRestaurantsLocal(restaurants);
                 renderRestaurants(getGroupFilteredRestaurants(restaurants));
                 closeRestaurantModal();
-                alert("⚠️ Supabase 尚未連線，目前只儲存在本機。");
+                alert("?��? Supabase 尚未???，目?�只?��??�本機�?);
             }
         }
 
@@ -1267,11 +1093,11 @@ async function initialize() {
     let lastProcessedUserId = null;
 
     window.addEventListener('authStateChanged', async (event) => {
-        AppLoading.show("正在同步雲端資料...");
+        AppLoading.show("�?��?�步?�端資�?...");
         const newUser = event.detail.user;
         const newUserId = newUser ? newUser.id : 'anonymous';
         
-        // 確保載入最新群組資料與餐廳資料
+        // 確�?載入?�?�群組�??��?餐廳資�?
         await loadGroupsFromSupabase();
         await loadRestaurantsFromSupabase();
         
@@ -1282,13 +1108,13 @@ async function initialize() {
             lastProcessedUserId = newUserId;
             reloadUserScopedLocalData();
         } else {
-            console.log("⚡ 偵測到重複的 Auth State 變更，已跳過重新載入");
+            console.log("???�測?��?複�? Auth State 變更，已跳�??�新載入");
         }
         AppLoading.hide(300);
     });
 
     window.addEventListener('groupSwitched', (event) => {
-        AppLoading.show("正在切換餐廳分組...");
+        AppLoading.show("�?��?��?餐廳?��?...");
         updateGroupSwitchButton(event.detail.groupName, canEditCurrentGroup());
         renderRestaurants(getGroupFilteredRestaurants(getRestaurants()));
         AppLoading.hide(300);
@@ -1297,10 +1123,10 @@ async function initialize() {
     // Test Supabase connection
     testSupabaseConnection();
 
-    // 若未登入，改為顯示登入提示，而非強制 replaceState 導致路由跳轉
+    // ?�未?�入，改?�顯示登?��?示�??��?強制 replaceState 導致路由跳�?
     if (!getCurrentUser()) {
-        console.log("使用者未登入，準備顯示登入視窗...");
-        // 確保 handleRoute 內部邏輯不會在應用程式初始化時造成頁面重載
+        console.log("使用?�未?�入，�??�顯示登?��?�?..");
+        // 確�? handleRoute ?�部?�輯不�??��??��?式�?始�??�造�??�面?��?
         handleRoute();
     }
 }
